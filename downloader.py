@@ -7,7 +7,7 @@ import pandas
 
 if __name__ == '__main__':
 
-    # provide date to download all data for each company by command line argument
+    # provide date to download all data for each company by command line argument YYYY-MM-DD
     date = sys.argv[1]
 
     dax = {'WDI': 'DE0007472060', 'DPW': 'DE0005552004', 'DBK': 'DE0005140008', 'RWE': 'DE0007037129',
