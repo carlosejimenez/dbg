@@ -14,14 +14,21 @@ dax = {'WDI': 'DE0007472060', 'DPW': 'DE0005552004', 'DBK': 'DE0005140008', 'RWE
        'MRK': 'DE0006599905', 'LIN': 'IE00BZ12WP82'}
 
 
-def download(date):
-    dax_copy = {}
+
+def download(date, api_key = 'e6e8d13f-2e66-476d-b375-c55b33eb7f8a'):
+    """download feather archive files for all DAX stocks from Xetra for a particular date (YYYY-MM-DD).
+    downloaded data schema is 'Mnemonic', 'Date', 'Time', 'StartPrice', 'MaxPrice',
+     'MinPrice', 'EndPrice', 'TradedVolume', 'NumberOfTrades'.
+
+    stdout is stocks that failed to write, most likely from an api error.
+    """
+
+    columns = ['Mnemonic', 'Date', 'Time', 'StartPrice', 'MaxPrice', 'MinPrice', 'EndPrice', 'TradedVolume',
+               'NumberOfTrades']
 
     for key in dax:
-        columns = ['Mnemonic', 'Date', 'Time', 'StartPrice', 'MaxPrice', 'MinPrice', 'EndPrice', 'TradedVolume', 'NumberOfTrades']
-
         headers = {
-            'X-DBP-APIKEY': 'e6e8d13f-2e66-476d-b375-c55b33eb7f8a',
+            'X-DBP-APIKEY': api_key,
         }
 
         params = (
@@ -36,8 +43,8 @@ def download(date):
             response = response.json()
             response_trimmed = []
 
-            for p in response:
-                entry = {i: p[i] for i in columns}
+            for minute in response:
+                entry = {i: minute[i] for i in columns}
                 response_trimmed.append(entry)
 
             df = pandas.DataFrame(response_trimmed, columns=columns)
@@ -45,7 +52,7 @@ def download(date):
             df.to_feather(f'{key}-{date}.feather')
 
         except:
-            print(f'{key} failed to write.')
+            print(f'{key} failed to write for date {date}.')
 
 
 if __name__ == '__main__':
