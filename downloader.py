@@ -14,7 +14,6 @@ dax = {'WDI': 'DE0007472060', 'DPW': 'DE0005552004', 'DBK': 'DE0005140008', 'RWE
        'MRK': 'DE0006599905', 'LIN': 'IE00BZ12WP82'}
 
 
-
 def download(date, api_key = 'e6e8d13f-2e66-476d-b375-c55b33eb7f8a'):
     """download feather archive files for all DAX stocks from Xetra for a particular date (YYYY-MM-DD).
     downloaded data schema is 'Mnemonic', 'Date', 'Time', 'StartPrice', 'MaxPrice',
@@ -39,16 +38,8 @@ def download(date, api_key = 'e6e8d13f-2e66-476d-b375-c55b33eb7f8a'):
 
         try:
             response = requests.get(url, headers=headers, params=params)
-
-            response = response.json()
-            response_trimmed = []
-
-            for minute in response:
-                entry = {i: minute[i] for i in columns}
-                response_trimmed.append(entry)
-
+            response_trimmed = [{i: minute[i] for i in columns} for minute in response.json()]
             df = pandas.DataFrame(response_trimmed, columns=columns)
-
             df.to_feather(f'{key}-{date}.feather')
 
         except:
