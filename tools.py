@@ -2,6 +2,7 @@ import os
 import pandas
 import requests
 
+from collections import defaultdict
 from datetime import datetime, timedelta
 
 dax = {'WDI': 'DE0007472060', 'DPW': 'DE0005552004', 'DBK': 'DE0005140008', 'RWE': 'DE0007037129',
@@ -18,8 +19,10 @@ urls = {'xetra': 'https://api.developer.deutsche-boerse.com/prod/xetra-public-da
 
 data_columns = {'xetra': ['Mnemonic', 'Date', 'Time', 'StartPrice', 'MaxPrice', 'MinPrice', 'EndPrice', 'TradedVolume',
                           'NumberOfTrades'],
-                'eurex': ['Isin', 'SecurityType', 'MaturityDate', 'StrikePrice', 'PutOrCall', 'Date', 'Time',
-                          'StartPrice', 'MaxPrice', 'MinPrice', 'EndPrice', 'NumberOfContracts', 'NumberOfTrades']}
+                'eurex': ['Isin', 'SecurityID', 'SecurityType', 'MaturityDate']
+                }
+                # 'eurex': ['Isin', 'SecurityType', 'MaturityDate', 'StrikePrice', 'PutOrCall', 'Date', 'Time',
+                #           'StartPrice', 'MaxPrice', 'MinPrice', 'EndPrice', 'NumberOfContracts', 'NumberOfTrades']}
 
 
 def trading_daterange(start, end):
@@ -33,7 +36,7 @@ def trading_daterange(start, end):
             continue
 
 
-def download(date, api, api_key, filepath):
+def download(date, api, api_key, filepath='./'):
     """download feather archive files for all DAX stocks from Xetra for a particular date (YYYY-MM-DD).
     downloaded data schema is 'Mnemonic', 'Date', 'Time', 'StartPrice', 'MaxPrice',
      'MinPrice', 'EndPrice', 'TradedVolume', 'NumberOfTrades'.
@@ -45,24 +48,60 @@ def download(date, api, api_key, filepath):
     url = urls[api]
     columns = data_columns[api]
 
-    for key in dax:
-        filename = filepath + f'{key}-{date}.feather'
-        if os.path.isfile(filename):
-            continue
+    if api == 'xetra':
+        for key in dax:
+            filename = filepath + f'{key}-{date}.feather'
+            if os.path.isfile(filename):
+                continue
 
-        headers = {
-            'X-DBP-APIKEY': api_key,
-        }
+            headers = {
+                'X-DBP-APIKEY': api_key,
+            }
 
-        params = (
-            ('date', f'{date}'), ('limit', 1000), ('isin', f'{dax[key]}')
-        )
+            params = [
+                ('date', f'{date}'), ('limit', 1000), ('isin', f'{dax[key]}')
+            ]
 
-        try:
+            try:
+                response = requests.get(url, headers=headers, params=params)
+                response_trimmed = [{i: minute[i] for i in columns} for minute in response.json()]
+                df = pandas.DataFrame(response_trimmed, columns=columns)
+                df.to_feather(filename)
+
+            except:
+                print(f'{api}-{key} failed to write for date {date}.')
+    elif api == 'eurex':
+        all_data = defaultdict(set)
+        count = 0
+
+        while(True):
+            headers = {
+                'X-DBP-APIKEY': api_key,
+            }
+
+            params = [
+                ('date', f'{date}'), ('limit', 1000), ('offset', count)
+            ]
+
             response = requests.get(url, headers=headers, params=params)
-            response_trimmed = [{i: minute[i] for i in columns} for minute in response.json()]
-            df = pandas.DataFrame(response_trimmed, columns=columns)
-            df.to_feather(filename)
+            if response.content != b'null':
+                try:
+                    response_trimmed = [{i: minute[i] for i in columns} for minute in response.json()]
+                    for data in response_trimmed:
+                        if data['Isin'] in dax.keys():
+                            print('DAXXXXXXXXXXXXXXX '*1000)
+                        all_data[data['Isin']].add(data['SecurityID'])
+                    print(max(map(len, all_data.values())))
+                    # print(f'count: {count}, all_data_len : {len(all_data.keys())}')
+                except:
+                    print(f"failed on count : {count}")
+                count += 10
+            else:
+                break
 
-        except:
-            print(f'{api}-{key} failed to write for date {date}.')
+        for key in dax:
+            # filename = filepath + f'{key}-{date}.feather'
+            # if os.path.isfile(filename):
+            #     continue
+
+            x = 10

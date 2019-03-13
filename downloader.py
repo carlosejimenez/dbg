@@ -17,5 +17,5 @@ if __name__ == '__main__':
     filepath = filepath+'/' if not filepath[-1] == '/' else filepath
 
     for day in trading_daterange(start_date, end_date):
-        download(date=day, api='xetra', api_key=api_key, filepath=filepath)
-        # download(date=day, api='eurex', api_key=api_key, filepath=filepath)
+        # download(date=day, api='xetra', api_key=api_key, filepath=filepath)
+        download(date=day, api='eurex', api_key=api_key, filepath=filepath)
