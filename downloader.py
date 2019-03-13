@@ -14,6 +14,14 @@ dax = {'WDI': 'DE0007472060', 'DPW': 'DE0005552004', 'DBK': 'DE0005140008', 'RWE
        'DAI': 'DE0007100000', 'FME': 'DE0005785802', 'DTE': 'DE0005557508', 'BMW': 'DE0005190003',
        'MRK': 'DE0006599905', 'LIN': 'IE00BZ12WP82'}
 
+urls = {'xetra': 'https://api.developer.deutsche-boerse.com/prod/xetra-public-data-set/1.0.0/xetra',
+        'eurex': 'https://api.developer.deutsche-boerse.com/prod/eurex-public-data-set/1.0.0/eurex'}
+
+data_columns = {'xetra': ['Mnemonic', 'Date', 'Time', 'StartPrice', 'MaxPrice', 'MinPrice', 'EndPrice', 'TradedVolume',
+                          'NumberOfTrades'],
+                'eurex': ['Isin', 'SecurityType', 'MaturityDate', 'StrikePrice', 'PutOrCall', 'Date', 'Time',
+                          'StartPrice', 'MaxPrice', 'MinPrice', 'EndPrice', 'NumberOfContracts', 'NumberOfTrades']}
+
 
 def trading_daterange(start, end):
     start = datetime.fromisoformat(start)
@@ -26,21 +34,20 @@ def trading_daterange(start, end):
             continue
 
 
-def download(date, filepath = './', api_key = 'e6e8d13f-2e66-476d-b375-c55b33eb7f8a'):
+def download(date, api, api_key, filepath):
     """download feather archive files for all DAX stocks from Xetra for a particular date (YYYY-MM-DD).
     downloaded data schema is 'Mnemonic', 'Date', 'Time', 'StartPrice', 'MaxPrice',
      'MinPrice', 'EndPrice', 'TradedVolume', 'NumberOfTrades'.
 
     stdout is stocks that failed to write, most likely from an api error.
     """
-
-    columns = ['Mnemonic', 'Date', 'Time', 'StartPrice', 'MaxPrice', 'MinPrice', 'EndPrice', 'TradedVolume',
-               'NumberOfTrades']
-
-    os.makedirs('./' + filepath, exist_ok=True)
+    filepath = './' + filepath + api + '/'
+    os.makedirs(filepath, exist_ok=True)
+    url = urls[api]
+    columns = data_columns[api]
 
     for key in dax:
-        filename = './' + filepath + f'{key}-{date}.feather'
+        filename = filepath + f'{key}-{date}.feather'
         if os.path.isfile(filename):
             continue
 
@@ -52,8 +59,6 @@ def download(date, filepath = './', api_key = 'e6e8d13f-2e66-476d-b375-c55b33eb7
             ('date', f'{date}'), ('limit', 1000), ('isin', f'{dax[key]}')
         )
 
-        url = 'https://api.developer.deutsche-boerse.com/prod/xetra-public-data-set/1.0.0/xetra'
-
         try:
             response = requests.get(url, headers=headers, params=params)
             response_trimmed = [{i: minute[i] for i in columns} for minute in response.json()]
@@ -61,10 +66,12 @@ def download(date, filepath = './', api_key = 'e6e8d13f-2e66-476d-b375-c55b33eb7
             df.to_feather(filename)
 
         except:
-            print(f'{key} failed to write for date {date}.')
+            print(f'{api}-{key} failed to write for date {date}.')
 
 
 if __name__ == '__main__':
+    api_key = open('apikey', 'r').readline().strip()
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--start')
     parser.add_argument('--end')
@@ -78,4 +85,5 @@ if __name__ == '__main__':
     filepath = filepath+'/' if not filepath[-1] == '/' else filepath
 
     for day in trading_daterange(start_date, end_date):
-        download(day, filepath)
+        download(date=day, api='xetra', api_key=api_key, filepath=filepath)
+        # download(date=day, api='eurex', api_key=api_key, filepath=filepath)
