@@ -1,8 +1,9 @@
-import sys
-import re
-import datetime
-import requests
+import argparse
+import os
 import pandas
+import requests
+
+from datetime import datetime, timedelta
 
 dax = {'WDI': 'DE0007472060', 'DPW': 'DE0005552004', 'DBK': 'DE0005140008', 'RWE': 'DE0007037129',
        'VNA': 'DE000A1ML7J1', 'LHA': 'DE0008232125', 'DB1': 'DE0005810055', 'TKA': 'DE0007500001',
@@ -14,7 +15,18 @@ dax = {'WDI': 'DE0007472060', 'DPW': 'DE0005552004', 'DBK': 'DE0005140008', 'RWE
        'MRK': 'DE0006599905', 'LIN': 'IE00BZ12WP82'}
 
 
-def download(date, api_key = 'e6e8d13f-2e66-476d-b375-c55b33eb7f8a'):
+def trading_daterange(start, end):
+    start = datetime.fromisoformat(start)
+    end = datetime.fromisoformat(end)
+    for days in range(int((end - start).days) + 1):
+        day = (start + timedelta(days))
+        if day.weekday() < 5:
+            yield day.date()
+        else:
+            continue
+
+
+def download(date, filepath = './', api_key = 'e6e8d13f-2e66-476d-b375-c55b33eb7f8a'):
     """download feather archive files for all DAX stocks from Xetra for a particular date (YYYY-MM-DD).
     downloaded data schema is 'Mnemonic', 'Date', 'Time', 'StartPrice', 'MaxPrice',
      'MinPrice', 'EndPrice', 'TradedVolume', 'NumberOfTrades'.
@@ -25,7 +37,13 @@ def download(date, api_key = 'e6e8d13f-2e66-476d-b375-c55b33eb7f8a'):
     columns = ['Mnemonic', 'Date', 'Time', 'StartPrice', 'MaxPrice', 'MinPrice', 'EndPrice', 'TradedVolume',
                'NumberOfTrades']
 
+    os.makedirs('./' + filepath, exist_ok=True)
+
     for key in dax:
+        filename = './' + filepath + f'{key}-{date}.feather'
+        if os.path.isfile(filename):
+            continue
+
         headers = {
             'X-DBP-APIKEY': api_key,
         }
@@ -40,15 +58,24 @@ def download(date, api_key = 'e6e8d13f-2e66-476d-b375-c55b33eb7f8a'):
             response = requests.get(url, headers=headers, params=params)
             response_trimmed = [{i: minute[i] for i in columns} for minute in response.json()]
             df = pandas.DataFrame(response_trimmed, columns=columns)
-            df.to_feather(f'{key}-{date}.feather')
+            df.to_feather(filename)
 
         except:
             print(f'{key} failed to write for date {date}.')
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--start')
+    parser.add_argument('--end')
+    parser.add_argument('--filepath')
+    args = parser.parse_args()
 
     # provide date to download all data for each company by command line argument YYYY-MM-DD
-    date = sys.argv[1]
+    start_date = args.start
+    end_date = args.end if args.end else start_date
+    filepath = args.filepath if args.filepath else './'
+    filepath = filepath+'/' if not filepath[-1] == '/' else filepath
 
-    download(date)
+    for day in trading_daterange(start_date, end_date):
+        download(day, filepath)
