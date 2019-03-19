@@ -1,6 +1,15 @@
 import os
+
 import pandas
 import requests
+import statsmodels.api as sm
+
+
+
+sm.tsa.ARMA([1, 1,1,1,1,1,1,1,1, 2, 3], (1, 1))
+
+
+
 
 from collections import OrderedDict
 from datetime import datetime, timedelta
@@ -21,6 +30,18 @@ data_columns = {'xetra': ['Mnemonic', 'Date', 'Time', 'StartPrice', 'MaxPrice', 
                           'NumberOfTrades'],
                 'eurex': ['Isin', 'SecurityType', 'MaturityDate', 'StrikePrice', 'PutOrCall', 'Date', 'Time',
                           'StartPrice', 'MaxPrice', 'MinPrice', 'EndPrice', 'NumberOfContracts', 'NumberOfTrades']}
+
+
+def trading_daterange(start, end):
+
+    start = datetime.fromisoformat(start)
+    end = datetime.fromisoformat(end)
+    for days in range(int((end - start).days) + 1):
+        day = (start + timedelta(days))
+        if day.weekday() < 5:
+            yield day.date()
+        else:
+            continue
 
 
 def download(date, api, api_key, filepath):
