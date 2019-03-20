@@ -111,3 +111,10 @@ venv.bak/
 
 # api key
 apikey
+
+# data files
+data/
+
+# .DS_Store
+.DS_Store
+
