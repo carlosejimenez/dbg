@@ -23,6 +23,36 @@ data_columns = {'xetra': ['Mnemonic', 'Date', 'Time', 'StartPrice', 'MaxPrice', 
                 'eurex': ['Isin', 'SecurityType', 'MaturityDate', 'StrikePrice', 'PutOrCall', 'Date', 'Time',
                           'StartPrice', 'MaxPrice', 'MinPrice', 'EndPrice', 'NumberOfContracts', 'NumberOfTrades']}
 
+holidays = ['2018-03-30', '2018-04-02', '2018-05-01', '2018-05-21', '2018-10-03', '2018-12-25', '2018-12-26',
+            '2019-01-01']
+
+
+def build_x_y(return_df, window, alpha):
+    """
+    Given a returns dataframe, we construct the EMA, SMA feature vectors returned as X, and the associated labels,
+    offset 1, returned as Y.
+    :param return_df: returns dataframe
+    :param window: window for EMA, SMA
+    :param alpha: alpha for EMA
+    :return: X, Y tuple
+    """
+    assert type(return_df) == pandas.DataFrame
+
+    ema_df = make_ema_df(return_df, window, alpha)
+    sma_df = make_sma_df(return_df, window)
+
+    return_df = return_df.loc[window:]
+    ema_df = ema_df.loc[:len(ema_df) - 2]
+    sma_df = sma_df.loc[:len(sma_df) - 2]
+
+    assert len(return_df) == len(ema_df) == len(sma_df)
+    return_df = return_df.reset_index(drop=True)
+
+    Y = list(return_df['Return'])
+    X = list(zip(ema_df['EMA'], sma_df['SMA']))
+
+    return X, Y
+
 
 def download(date, api, api_key, filepath, stock_query=None):
     """download feather archive files for all DAX stocks from Xetra for a particular date (YYYY-MM-DD).
@@ -182,37 +212,6 @@ def make_return_df(stock, start, end=None, interval=30, filepath='./'):
         return_df.loc[len(return_df)] = [stock, date, time, ret]
 
     return return_df
-
-
-def build_x_y(return_df, window, alpha):
-    """
-    Given a returns dataframe, we construct the EMA, SMA feature vectors returned as X, and the associated labels,
-    offset 1, returned as Y.
-    :param return_df: returns dataframe
-    :param window: window for EMA, SMA
-    :param alpha: alpha for EMA
-    :return: X, Y tuple
-    """
-    assert type(return_df) == pandas.DataFrame
-
-    ema_df = make_ema_df(return_df, window, alpha)
-    sma_df = make_sma_df(return_df, window)
-
-    return_df = return_df.loc[window:]
-    ema_df = ema_df.loc[:len(ema_df) - 2]
-    sma_df = sma_df.loc[:len(sma_df) - 2]
-
-    assert len(return_df) == len(ema_df) == len(sma_df)
-    return_df = return_df.reset_index(drop=True)
-
-    Y = list(return_df['Return'])
-    X = list(zip(ema_df['EMA'], sma_df['SMA']))
-
-    return X, Y
-
-
-holidays = ['2018-03-30', '2018-04-02', '2018-05-01', '2018-05-21', '2018-10-03', '2018-12-25', '2018-12-26',
-            '2019-01-01']
 
 
 def trading_daterange(start, end):
