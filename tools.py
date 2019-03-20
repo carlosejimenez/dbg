@@ -6,7 +6,6 @@ import statsmodels.api as sm
 
 
 
-sm.tsa.ARMA([1, 1,1,1,1,1,1,1,1, 2, 3], (1, 1))
 
 
 
@@ -32,22 +31,17 @@ data_columns = {'xetra': ['Mnemonic', 'Date', 'Time', 'StartPrice', 'MaxPrice', 
                           'StartPrice', 'MaxPrice', 'MinPrice', 'EndPrice', 'NumberOfContracts', 'NumberOfTrades']}
 
 
-def trading_daterange(start, end):
-
-    start = datetime.fromisoformat(start)
-    end = datetime.fromisoformat(end)
-    for days in range(int((end - start).days) + 1):
-        day = (start + timedelta(days))
-        if day.weekday() < 5:
-            yield day.date()
-        else:
-            continue
-
-
-def download(date, api, api_key, filepath):
+def download(date, api, api_key, filepath, stock_query=None):
     """download feather archive files for all DAX stocks from Xetra for a particular date (YYYY-MM-DD).
     downloaded data schema is 'Mnemonic', 'Date', 'Time', 'StartPrice', 'MaxPrice',
      'MinPrice', 'EndPrice', 'TradedVolume', 'NumberOfTrades'.
+
+     :param date: Date as YYYY-MM-DD
+     :param api: api to query
+     :param api_key: key to use for api
+     :param filepath: Path to save price data.
+     :param stock_query: Optional, can be str, e.g. 'BMW'; or a list of of mnemonics, e.g. ['BMW', 'SAP'], default is
+     the DAX index.
 
     stdout is stocks that failed to write, most likely from an api error.
     """
@@ -56,8 +50,14 @@ def download(date, api, api_key, filepath):
     url = urls[api]
     columns = data_columns[api]
 
-    for key in dax:
-        filename = filepath + f'{key}-{date}.feather'
+    if stock_query:
+        if type(stock_query) is str:
+            stock_query = [stock_query]
+    else:
+        stock_query = dax
+
+    for stock_name in stock_query:
+        filename = filepath + f'{stock_name}-{date}.feather'
         if os.path.isfile(filename):
             continue
 
@@ -66,17 +66,18 @@ def download(date, api, api_key, filepath):
         }
 
         params = (
-            ('date', f'{date}'), ('limit', 1000), ('isin', f'{dax[key]}')
+            ('date', f'{date}'), ('limit', 1000), ('isin', f'{dax[stock_name]}')
         )
 
         try:
             response = requests.get(url, headers=headers, params=params)
+            print(f'\rSaving file {stock_name} for {date}', end='')
             response_trimmed = [{i: minute[i] for i in columns} for minute in response.json()]
             df = pandas.DataFrame(response_trimmed, columns=columns)
             df.to_feather(filename)
 
         except:
-            print(f'{api}-{key} failed to write for date {date}.')
+            print(f'\r{api}-{stock_name} failed to write for date {date}.')
 
 
 def make_return_df(stock, start, end=None, interval=30, filepath='./'):
@@ -101,7 +102,7 @@ def make_return_df(stock, start, end=None, interval=30, filepath='./'):
         filename = filepath + f'xetra/{stock}-{date}.feather'
         if not os.path.isfile(filename):
             # If data does not yet exist, we download it first.
-            download(date, 'xetra', open('apikey', 'r').readline().strip(), filepath)
+            download(date, 'xetra', open('apikey', 'r').readline().strip(), filepath, stock)
         if os.path.isfile(filename):
             df = pandas.read_feather(filename, columns=data_columns['xetra'])
             data = data.append(df)
@@ -136,14 +137,23 @@ def make_return_df(stock, start, end=None, interval=30, filepath='./'):
 
     return return_df
 
+holidays = ['2018-03-30', '2018-04-02', '2018-05-01', '2018-05-21', '2018-10-03', '2018-12-25', '2018-12-26',
+            '2019-01-01']
+
 
 def trading_daterange(start, end):
     start = datetime.fromisoformat(start)
     end = datetime.fromisoformat(end)
-    for days in range(int((end - start).days) + 1):
+
+    number_of_days = int((end - start).days) + 1
+    if number_of_days < 0:
+        raise ValueError(f'start date {start.date()} must be before end date {end.date()}')
+
+    for days in range(number_of_days):
         day = (start + timedelta(days))
-        if day.weekday() < 5:
+        if day.weekday() < 5 and str(day.date()) not in holidays:
             yield day.date()
         else:
             continue
+
 

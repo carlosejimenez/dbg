@@ -12,6 +12,9 @@ if __name__ == '__main__':
 
     # provide date to download all data for each company by command line argument YYYY-MM-DD
     start_date = args.start
+    if start_date is None:
+        raise ValueError('--start must be provided.')
+
     end_date = args.end if args.end else start_date
     filepath = args.filepath if args.filepath else './'
     filepath = filepath+'/' if not filepath[-1] == '/' else filepath
