@@ -1,7 +1,7 @@
 import os
-
 import pandas
 import requests
+import statistics
 
 from collections import OrderedDict
 from datetime import datetime, timedelta
@@ -73,9 +73,62 @@ def download(date, api, api_key, filepath, stock_query=None):
             print(f'\r{api}-{stock_name} failed to write for date {date}.')
 
 
-def make_return_df(stock, start, end=None, interval=30, filepath='./'):
+def make_ema_df(data, window, alpha):
+    """Given a return dataframe, returns the ema for each point in the dataframe based on parameters.
+
+    :param data: a return dataframe
+    :param window: int, ema's moving window
+    :param alpha: weight in (0, 1)
+    :return: ema dataframe with original dataframe - window points
     """
-    Given a stock, a start date, end date optional, we return a returns dataframe with column headings
+    if len(data) < window:
+        raise ValueError(f'Data input shorter than window, ema cannot be computed.')
+    if not 0 <= alpha <= 1:
+        raise ValueError(f'alpha: {alpha} not in bounds of (0, 1)')
+    # splicing does NOT work the same in pandas as in Python. Pandas include spliced value when head splicing.
+    ema = [statistics.mean(data['Return'].loc[:window-1])]
+    # window-2: because we already added a value to ema.
+    ema_df = data[['Mnemonic', 'Date', 'Time']].loc[window-1:]
+    # Pandas excludes the spliced value whe tail splicing.
+    returns = data['Return'].loc[window:]
+    for value in returns:
+        ema_point = alpha * value + (1-alpha) * ema[-1]
+        ema.append(ema_point)
+
+    # resets index for dataframe so we can iterate from 0
+    ema_df = ema_df.reset_index(drop=True)
+    ema_df['EMA'] = ema
+    return ema_df
+
+
+def make_sma_df(data, window):
+    """Given a return dataframe, returns the sma for each point in the dataframe.
+    :param data: return dataframe
+    :param window: int, sma's moving window
+    :return:
+    """
+    if len(data) < window:
+        raise ValueError(f'Data input shorter than window, ema cannot be computed.')
+    # window-2: because we initialize sma with a value already.
+    sma_df = data[['Mnemonic', 'Date', 'Time']].loc[window - 1:]
+    # splicing does NOT work the same in pandas as in Python. Pandas includes spliced value when head splicing.
+    window_list = list(data['Return'].loc[:window - 1])
+    sma = [statistics.mean(window_list)]
+    # Pandas excludes the spliced value whe tail splicing.
+    returns = data['Return'].loc[window:]
+    for value in returns:
+        window_list = window_list[1:] + window_list[:1]
+        window_list[-1] = value
+        sma.append(statistics.mean(window_list))
+
+    # resets index for dataframe so we can iterate from 0
+    sma_df = sma_df.reset_index(drop=True)
+    sma_df['SMA'] = sma
+    return sma_df
+
+
+def make_return_df(stock, start, end=None, interval=30, filepath='./'):
+    """Given a stock, a start date, end date optional, we return a returns dataframe with column headings
     ['Mnemonic', 'Date', 'Time', 'Return'].
     :param stock: Mnemonic string
     :param start: YYYY-MM-DD string
@@ -129,6 +182,33 @@ def make_return_df(stock, start, end=None, interval=30, filepath='./'):
         return_df.loc[len(return_df)] = [stock, date, time, ret]
 
     return return_df
+
+
+def build_x_y(return_df, window, alpha):
+    """
+    Given a returns dataframe, we construct the EMA, SMA feature vectors returned as X, and the associated labels,
+    offset 1, returned as Y.
+    :param return_df: returns dataframe
+    :param window: window for EMA, SMA
+    :param alpha: alpha for EMA
+    :return: X, Y tuple
+    """
+    assert type(return_df) == pandas.DataFrame
+
+    ema_df = make_ema_df(return_df, window, alpha)
+    sma_df = make_sma_df(return_df, window)
+
+    return_df = return_df.loc[window:]
+    ema_df = ema_df.loc[:len(ema_df) - 2]
+    sma_df = sma_df.loc[:len(sma_df) - 2]
+
+    assert len(return_df) == len(ema_df) == len(sma_df)
+    return_df = return_df.reset_index(drop=True)
+
+    Y = list(return_df['Return'])
+    X = list(zip(ema_df['EMA'], sma_df['SMA']))
+
+    return X, Y
 
 
 holidays = ['2018-03-30', '2018-04-02', '2018-05-01', '2018-05-21', '2018-10-03', '2018-12-25', '2018-12-26',
