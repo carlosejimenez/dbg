@@ -1,4 +1,5 @@
 import tools
+import statsmodels.api as sm
 
 my_df = tools.make_return_df('BMW', '2017-06-17', '2019-03-18')
 

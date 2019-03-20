@@ -2,13 +2,6 @@ import os
 
 import pandas
 import requests
-import statsmodels.api as sm
-
-
-
-
-
-
 
 from collections import OrderedDict
 from datetime import datetime, timedelta
@@ -136,6 +129,7 @@ def make_return_df(stock, start, end=None, interval=30, filepath='./'):
         return_df.loc[len(return_df)] = [stock, date, time, ret]
 
     return return_df
+
 
 holidays = ['2018-03-30', '2018-04-02', '2018-05-01', '2018-05-21', '2018-10-03', '2018-12-25', '2018-12-26',
             '2019-01-01']
