@@ -197,8 +197,10 @@ def make_return_df(stock, start, end=None, interval=30, filepath='./'):
         if key not in buckets:
             buckets[key] = (int(minutes), price)
         else:
-            if int(minutes) > buckets[key][0]:
-                buckets[key] = (int(minutes), price)
+            # Here we are only keeping the first datapoint in the window, in order to calculate the return later.
+            continue
+            # if int(minutes) < buckets[key][0]:
+            #     buckets[key] = (int(minutes), price)
 
     return_df = pandas.DataFrame(columns=['Mnemonic', 'Date', 'Time', 'Return'])
 
