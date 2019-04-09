@@ -163,7 +163,7 @@ def make_sma_df(data, window):
     return sma_df
 
 
-def make_return_df(stock, start, end=None, interval=30, dirpath='./'):
+def make_return_df(stock, start, end=None, interval=30, dirpath='./xetra/'):
     """Given a stock, a start date, end date optional, we return a returns dataframe with column headings
     ['Mnemonic', 'Date', 'Time', 'Return'].
     :param stock: Mnemonic string
@@ -181,7 +181,7 @@ def make_return_df(stock, start, end=None, interval=30, dirpath='./'):
     data = pandas.DataFrame(columns=data_columns['xetra'])
 
     for date in trading_daterange(start, end):
-        filename = dirpath + f'xetra/{stock}-{date}.feather'
+        filename = dirpath + f'{stock}-{date}.feather'
         if not os.path.isfile(filename):
             # If data does not yet exist, we download it first.
             download(date, 'xetra', open('apikey', 'r').readline().strip(), dirpath, stock)
