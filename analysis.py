@@ -12,33 +12,18 @@ from sklearn.model_selection import KFold
 from sklearn import linear_model, metrics
 from sklearn.linear_model import LassoCV, RidgeCV, Lasso, Ridge
 
-
 import tools
-first_day = '2017-06-17'
-yesterday = date.today() - timedelta(1)
-
-percentage_to_evaluate = 0.05
-
-interval_length = 2
-window_length = 10
-ema_hyper_parameter = 0.2
-k_fold_hyperparameter = 6
 
 
-my_df = tools.make_return_df('BMW', first_day, yesterday.strftime('%Y-%m-%d'), interval=interval_length, difference=True)
+def split_data(X, Y, percentage_to_evaluate):
+    # Slice out evaluation set.
+    evaluation_set_count = int(len(X) * percentage_to_evaluate)
+    evaluation_set_x = X[len(X) - evaluation_set_count:]
+    x = X[:len(X) - evaluation_set_count]
+    evaluation_set_y = Y[len(X) - evaluation_set_count:]
+    y = X[:len(X) - evaluation_set_count]
+    return x, evaluation_set_x, y, evaluation_set_y
 
-x, y = tools.build_x_y(my_df, window_length, ema_hyper_parameter)
-
-# Slice out evaluation set.
-evaluation_set_count = int(len(my_df)*percentage_to_evaluate)
-evaluation_set_x = x[len(my_df) - evaluation_set_count:]
-x = x[:len(my_df) - evaluation_set_count]
-evaluation_set_y = y[len(my_df) - evaluation_set_count:]
-y = y[:len(my_df) - evaluation_set_count]
-
-
-alphas_ridge = np.arange(0, 1, 0.01)
-alphas_lasso = np.arange(0, 100, 1)
 
 def run_regression_return_score(regression_function, X, Y, alphas, cv=None):
     """
@@ -76,15 +61,33 @@ def run_regression_return_score(regression_function, X, Y, alphas, cv=None):
         return best_score, best_alpha
 
 
-clf = RidgeCV(np.arange(0.01, 1, 0.01), cv=k_fold_hyperparameter, fit_intercept=False)
-clf.fit(x, y)
-print(f'coefficient is {clf.coef_}')
+if __name__ == '__main__':
+    first_day = '2017-06-17'
+    yesterday = date.today() - timedelta(1)
 
-for tick in evaluation_set_x:
+    percentage_to_evaluate = 0.05
+
+    interval_length = 5
+    window_length = 10
+    ema_hyper_parameter = 0.2
+    k_fold_hyperparameter = 6
+
+    my_df = tools.make_return_df('BMW', first_day, yesterday.strftime('%Y-%m-%d'), interval=interval_length)
+
+    x, y = tools.build_x_y(my_df, window_length, ema_hyper_parameter)
+
+    x, evaluation_set_x, y, evaluation_set_y = split_data(x, y, percentage_to_evaluate)
+
+    alphas_ridge = np.arange(0, 1, 0.01)
+    alphas_lasso = np.arange(0, 100, 1)
+
+    clf = RidgeCV(np.arange(0.01, 1, 0.01), cv=k_fold_hyperparameter, fit_intercept=False)
+    clf.fit(x, y)
+    print(f'coefficient is {clf.coef_}')
+
+    print(clf.score(evaluation_set_x, evaluation_set_y))
 
 
-
-print(clf.score(evaluation_set_x, evaluation_set_y))
 # clf = LassoCV(np.arange(0.01, 1, 0.01), 6)
 # clf.fit(x, y)
 # print(clf.score(evaluation_set_x, evaluation_set_y))
