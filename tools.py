@@ -60,7 +60,7 @@ def build_x_y(return_df, window, alpha):
     return X, Y
 
 
-def download(date, api, api_key, filepath, stock_query=None):
+def download(date, api, api_key, dirpath, stock_query=None):
     """download feather archive files for all DAX stocks from Xetra for a particular date (YYYY-MM-DD).
     downloaded data schema is 'Mnemonic', 'Date', 'Time', 'StartPrice', 'MaxPrice',
      'MinPrice', 'EndPrice', 'TradedVolume', 'NumberOfTrades'.
@@ -68,14 +68,14 @@ def download(date, api, api_key, filepath, stock_query=None):
      :param date: Date as YYYY-MM-DD
      :param api: api to query
      :param api_key: key to use for api
-     :param filepath: Path to save price data.
+     :param dirpath: Path to save price data.
      :param stock_query: Optional, can be str, e.g. 'BMW'; or a list of of mnemonics, e.g. ['BMW', 'SAP'], default is
      the DAX index.
 
     stdout is stocks that failed to write, most likely from an api error.
     """
-    filepath = './' + filepath + api + '/'
-    os.makedirs(filepath, exist_ok=True)
+    dirpath = './' + dirpath + api + '/'
+    os.makedirs(dirpath, exist_ok=True)
     url = urls[api]
     columns = data_columns[api]
 
@@ -86,7 +86,7 @@ def download(date, api, api_key, filepath, stock_query=None):
         stock_query = dax
 
     for stock_name in stock_query:
-        filename = filepath + f'{stock_name}-{date}.feather'
+        filename = dirpath + f'{stock_name}-{date}.feather'
         if os.path.isfile(filename):
             continue
 
@@ -163,28 +163,28 @@ def make_sma_df(data, window):
     return sma_df
 
 
-def make_return_df(stock, start, end=None, interval=30, filepath='./'):
+def make_return_df(stock, start, end=None, interval=30, dirpath='./'):
     """Given a stock, a start date, end date optional, we return a returns dataframe with column headings
     ['Mnemonic', 'Date', 'Time', 'Return'].
     :param stock: Mnemonic string
     :param start: YYYY-MM-DD string
     :param end: YYYY-MM-DD string
     :param interval: integer divisor of 60
-    :param filepath: string
+    :param dirpath: string
     :return: pandas.Dataframe()
     """
     if 60 % interval != 0:
         raise ValueError(f'Interval of {interval} not a divisor of 60.')
 
     end = end if end else start
-    filepath = filepath if filepath[-1] == '/' else filepath + '/'
+    dirpath = dirpath if dirpath[-1] == '/' else dirpath + '/'
     data = pandas.DataFrame(columns=data_columns['xetra'])
 
     for date in trading_daterange(start, end):
-        filename = filepath + f'xetra/{stock}-{date}.feather'
+        filename = dirpath + f'xetra/{stock}-{date}.feather'
         if not os.path.isfile(filename):
             # If data does not yet exist, we download it first.
-            download(date, 'xetra', open('apikey', 'r').readline().strip(), filepath, stock)
+            download(date, 'xetra', open('apikey', 'r').readline().strip(), dirpath, stock)
         if os.path.isfile(filename):
             df = pandas.read_feather(filename, columns=data_columns['xetra'])
             data = data.append(df)
@@ -194,6 +194,8 @@ def make_return_df(stock, start, end=None, interval=30, filepath='./'):
     for index, row in data.iterrows():
         date = row['Date']
         hour, minutes = row['Time'].split(':')
+        if int(hour) < 7:  # Price adjustements are recorded as pre-open trades. We omit them from analysis.
+            continue
         price = row['EndPrice']
         minute_val = interval * (int(minutes) // interval)
         minute_val = str(minute_val) if minute_val > 10 else '0' + str(minute_val)
@@ -203,19 +205,21 @@ def make_return_df(stock, start, end=None, interval=30, filepath='./'):
         if key not in buckets:
             buckets[key] = (int(minutes), price)
         else:
-            # Here we are only keeping the first datapoint in the window, in order to calculate the return later.
+            # Here we are only keeping the first data point in the window, in order to calculate the return later.
             continue
-            # if int(minutes) < buckets[key][0]:
-            #     buckets[key] = (int(minutes), price)
 
     return_df = pandas.DataFrame(columns=['Mnemonic', 'Date', 'Time', 'Return'])
 
     price_items = list(buckets.items())
 
+    yesterday = price_items[0][0].split(' ')[0]  # first date in the sequence.
     for index in range(1, len(buckets)):
         old_price = price_items[index-1][1]
         key, price = price_items[index]
         date, time = key.split(' ')
+        if date != yesterday:  # We omit returns from inter-day trading.
+            yesterday = date
+            continue
         ret = (price[1] - float(old_price[1])) / float(old_price[1])
         return_df.loc[len(return_df)] = [stock, date, time, ret]
 
