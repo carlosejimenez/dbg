@@ -181,6 +181,7 @@ def make_return_df(stock, start, end=None, interval=30, dirpath='./xetra/', diff
     :param interval: integer divisor of 60
     :param dirpath: string
     :return: pandas.Dataframe()
+    :param difference: bool
     """
     if 60 % interval != 0:
         raise ValueError(f'Interval of {interval} not a divisor of 60.')
