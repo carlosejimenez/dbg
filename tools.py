@@ -2,6 +2,7 @@ import os
 import pandas
 import requests
 import statistics
+from threading import Lock
 
 from collections import OrderedDict
 from datetime import datetime, timedelta
@@ -13,7 +14,9 @@ dax = {'WDI': 'DE0007472060', 'DPW': 'DE0005552004', 'DBK': 'DE0005140008', 'RWE
        'HEI': 'DE0006047004', 'SIE': 'DE0007236101', 'HEN3': 'DE0006048432', 'ALV': 'DE0008404005',
        'VOW3': 'DE0007664039', 'BAYN': 'DE000BAY0017', 'ADS': 'DE000A1EWWW0', 'FRE': 'DE0005785604',
        'DAI': 'DE0007100000', 'FME': 'DE0005785802', 'DTE': 'DE0005557508', 'BMW': 'DE0005190003',
-       'MRK': 'DE0006599905', 'LIN': 'IE00BZ12WP82'}
+       'MRK': 'DE0006599905' }
+
+
 
 urls = {'xetra': 'https://api.developer.deutsche-boerse.com/prod/xetra-public-data-set/1.0.0/xetra',
         'eurex': 'https://api.developer.deutsche-boerse.com/prod/eurex-public-data-set/1.0.0/eurex'}
@@ -31,6 +34,7 @@ holidays = ['2018-03-30', '2018-04-02', '2018-05-01', '2018-05-21', '2018-10-03'
             '2017-10-31', '2017-12-25', '2017-12-26', '2018-01-01', '2018-07-13']
             #todo remove these
 
+lock = Lock()
 
 
 def build_x_y(return_df, window, alpha):
@@ -99,14 +103,19 @@ def download(date, api, api_key, dirpath, stock_query=None):
         )
 
         try:
+            lock.acquire()
             response = requests.get(url, headers=headers, params=params)
+            lock.release()
+            if response.status_code is not 200:
+                print(f'\nresponse not 200, instead {response.status_code}, raising exception')
+                raise Exception
             print(f'\rSaving file {stock_name} for {date}', end='')
             response_trimmed = [{i: minute[i] for i in columns} for minute in response.json()]
             df = pandas.DataFrame(response_trimmed, columns=columns)
             df.to_feather(filename)
-
+            response.close()
         except:
-            print(f'\r{api}-{stock_name} failed to write for date {date}.')
+            print(f'\r{api}-{stock_name} failed to write for date {date}')
 
 
 def make_ema_df(data, window, alpha):
