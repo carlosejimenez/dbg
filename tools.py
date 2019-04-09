@@ -163,7 +163,7 @@ def make_sma_df(data, window):
     return sma_df
 
 
-def make_return_df(stock, start, end=None, interval=30, dirpath='./xetra/'):
+def make_return_df(stock, start, end=None, interval=30, dirpath='./xetra/', difference=False):
     """Given a stock, a start date, end date optional, we return a returns dataframe with column headings
     ['Mnemonic', 'Date', 'Time', 'Return'].
     :param stock: Mnemonic string
@@ -220,7 +220,10 @@ def make_return_df(stock, start, end=None, interval=30, dirpath='./xetra/'):
         if date != yesterday:  # We omit returns from inter-day trading.
             yesterday = date
             continue
-        ret = (price[1] - float(old_price[1])) / float(old_price[1])
+        if difference:
+            ret = price[1] - float(old_price[1])
+        else:
+            ret = (price[1] - float(old_price[1])) / float(old_price[1])
         return_df.loc[len(return_df)] = [stock, date, time, ret]
 
     return return_df
