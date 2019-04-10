@@ -188,8 +188,9 @@ def make_return_df(stock, start, end=None, interval=30, dirpath='./', difference
 
     end = end if end else start
     dirpath = dirpath if dirpath[-1] == '/' else dirpath + '/'
-    data = pandas.DataFrame(columns=data_columns['xetra'])
-
+    # data = pandas.DataFrame(columns=data_columns['xetra']
+    data = []
+    starttime = datetime.now()
     for date in trading_daterange(start, end):
         filename = dirpath + 'xetra/' + f'{stock}-{date}.feather'  # We always assume that the file is in ./xetra
         if not os.path.isfile(filename):
@@ -197,7 +198,10 @@ def make_return_df(stock, start, end=None, interval=30, dirpath='./', difference
             download(date, 'xetra', open('apikey', 'r').readline().strip(), dirpath, stock)
         if os.path.isfile(filename):
             df = pandas.read_feather(filename, columns=data_columns['xetra'])
-            data = data.append(df)
+            data.extend(df.values.tolist())
+
+    data = pandas.DataFrame(data, columns=data_columns['xetra'])
+    print(f'{(datetime.now() - starttime).seconds} seconds')
 
     buckets = OrderedDict()
 
