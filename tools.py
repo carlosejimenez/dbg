@@ -144,6 +144,70 @@ def make_ema_df(data, window, alpha):
     return ema_df
 
 
+def make_price_df(stock, start, end=None, interval=30, dirpath='./'):
+    """Given a stock, a start date, end date optional, we return a prices dataframe with column headings
+    ['Mnemonic', 'Date', 'Time', 'Price'].
+    :param stock: Mnemonic string
+    :param start: YYYY-MM-DD string
+    :param end: YYYY-MM-DD string
+    :param interval: integer divisor of 60
+    :param dirpath: string
+    :return: pandas.Dataframe()
+    """
+    if 60 % interval != 0:
+        raise ValueError(f'Interval of {interval} not a divisor of 60.')
+
+    end = end if end else start
+    dirpath = dirpath if dirpath[-1] == '/' else dirpath + '/'
+    data = []
+    starttime = datetime.now()
+    for date in trading_daterange(start, end):
+        filename = dirpath + 'xetra/' + f'{stock}-{date}.feather'  # We always assume that the file is in ./xetra
+        if not os.path.isfile(filename):
+            # If data does not yet exist, we download it first.
+            download(date, 'xetra', open('apikey', 'r').readline().strip(), dirpath, stock)
+        if os.path.isfile(filename):
+            df = pandas.read_feather(filename, columns=data_columns['xetra'])
+            data.extend(df.values.tolist())
+    data = pandas.DataFrame(data, columns=data_columns['xetra'])
+    print(f'{(datetime.now() - starttime).seconds} seconds')
+    buckets = OrderedDict()
+    for index, row in data.iterrows():
+        date = row['Date']
+        hour, minutes = row['Time'].split(':')
+        if int(hour) < 7:  # Price adjustements are recorded as pre-open trades. We omit them from analysis.
+            continue
+        price = row['EndPrice']
+        volume = row['NumberOfTrades']
+        minute_val = interval * (int(minutes) // interval)
+        minute_val = str(minute_val) if minute_val > 10 else '0' + str(minute_val)
+        key = f'{date} {hour}:{minute_val}'
+        # by using a dictionary we let the data structure do the bucketing for us.
+        if key not in buckets:
+            buckets[key] = [(volume, price)]
+        else:
+            buckets[key].append((volume, price))
+    price_list = []
+    price_items = list(buckets.items())
+    yesterday = price_items[0][0].split(' ')[0]  # first date in the sequence.
+    for index in range(0, len(buckets)):
+        key, prices = price_items[index]
+        date, time = key.split(' ')
+        if date != yesterday:  # We omit prices from inter-day trading.
+            yesterday = date
+            continue
+        avg_price = get_weighted_avg(prices)
+        price_list.append([stock, date, time, avg_price])
+    price_df = pandas.DataFrame(price_list, columns=['Mnemonic', 'Date', 'Time', 'Price'])
+    return price_df
+
+
+def get_weighted_avg(tuples_list):
+    size = sum([w[0] for w in tuples_list])
+    avg = sum(map(lambda w: w[0]*w[1], tuples_list))/size
+    return avg
+
+
 def make_sma_df(data, window):
     """Given a return dataframe, returns the sma for each point in the dataframe.
     :param data: return dataframe
