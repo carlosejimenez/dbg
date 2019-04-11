@@ -14,9 +14,7 @@ dax = {'WDI': 'DE0007472060', 'DPW': 'DE0005552004', 'DBK': 'DE0005140008', 'RWE
        'HEI': 'DE0006047004', 'SIE': 'DE0007236101', 'HEN3': 'DE0006048432', 'ALV': 'DE0008404005',
        'VOW3': 'DE0007664039', 'BAYN': 'DE000BAY0017', 'ADS': 'DE000A1EWWW0', 'FRE': 'DE0005785604',
        'DAI': 'DE0007100000', 'FME': 'DE0005785802', 'DTE': 'DE0005557508', 'BMW': 'DE0005190003',
-       'MRK': 'DE0006599905' }
-
-
+       'MRK': 'DE0006599905'}
 
 urls = {'xetra': 'https://api.developer.deutsche-boerse.com/prod/xetra-public-data-set/1.0.0/xetra',
         'eurex': 'https://api.developer.deutsche-boerse.com/prod/eurex-public-data-set/1.0.0/eurex'}
@@ -188,7 +186,6 @@ def make_return_df(stock, start, end=None, interval=30, dirpath='./', difference
 
     end = end if end else start
     dirpath = dirpath if dirpath[-1] == '/' else dirpath + '/'
-    # data = pandas.DataFrame(columns=data_columns['xetra']
     data = []
     starttime = datetime.now()
     for date in trading_daterange(start, end):
