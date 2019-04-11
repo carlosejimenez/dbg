@@ -199,12 +199,9 @@ def make_return_df(stock, start, end=None, interval=30, dirpath='./', difference
         if os.path.isfile(filename):
             df = pandas.read_feather(filename, columns=data_columns['xetra'])
             data.extend(df.values.tolist())
-
     data = pandas.DataFrame(data, columns=data_columns['xetra'])
     print(f'{(datetime.now() - starttime).seconds} seconds')
-
     buckets = OrderedDict()
-
     for index, row in data.iterrows():
         date = row['Date']
         hour, minutes = row['Time'].split(':')
@@ -214,18 +211,14 @@ def make_return_df(stock, start, end=None, interval=30, dirpath='./', difference
         minute_val = interval * (int(minutes) // interval)
         minute_val = str(minute_val) if minute_val > 10 else '0' + str(minute_val)
         key = f'{date} {hour}:{minute_val}'
-
         # by using a dictionary we let the data structure do the bucketing for us.
         if key not in buckets:
             buckets[key] = (int(minutes), price)
         else:
             # Here we are only keeping the first data point in the window, in order to calculate the return later.
             continue
-
-    return_df = pandas.DataFrame(columns=['Mnemonic', 'Date', 'Time', 'Return'])
-
+    return_list = []
     price_items = list(buckets.items())
-
     yesterday = price_items[0][0].split(' ')[0]  # first date in the sequence.
     for index in range(1, len(buckets)):
         old_price = price_items[index-1][1]
@@ -238,24 +231,20 @@ def make_return_df(stock, start, end=None, interval=30, dirpath='./', difference
             ret = price[1] - float(old_price[1])
         else:
             ret = (price[1] - float(old_price[1])) / float(old_price[1])
-        return_df.loc[len(return_df)] = [stock, date, time, ret]
-
+        return_list.append([stock, date, time, ret])
+    return_df = pandas.DataFrame(return_list, columns=['Mnemonic', 'Date', 'Time', 'Return'])
     return return_df
 
 
 def trading_daterange(start, end):
     start = datetime.fromisoformat(start)
     end = datetime.fromisoformat(end)
-
     number_of_days = int((end - start).days) + 1
     if number_of_days < 0:
         raise ValueError(f'start date {start.date()} must be before end date {end.date()}')
-
     for days in range(number_of_days):
         day = (start + timedelta(days))
         if day.weekday() < 5 and str(day.date()) not in holidays:
             yield day.date()
         else:
             continue
-
-
