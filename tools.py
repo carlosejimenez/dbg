@@ -231,7 +231,7 @@ def make_price_df(stock, start, end=None, interval=30, dirpath='./'):
         price = row[col_index('EndPrice')]
         volume = row[col_index('NumberOfTrades')]
         minute_val = interval * (int(minutes) // interval)
-        minute_val = str(minute_val) if minute_val > 10 else '0' + str(minute_val)
+        minute_val = str(minute_val) if minute_val >= 10 else '0' + str(minute_val)
         key = f'{date} {hour}:{minute_val}'
         # by using a dictionary we let the data structure do the bucketing for us.
         if key not in buckets:
@@ -347,7 +347,7 @@ def make_return_df(stock, start, end=None, interval=30, dirpath='./', ignore_mis
             continue
         price = row[col_index('EndPrice')]
         minute_val = interval * (int(minutes) // interval)
-        minute_val = str(minute_val) if minute_val > 10 else '0' + str(minute_val)
+        minute_val = str(minute_val) if minute_val >= 10 else '0' + str(minute_val)
         key = f'{date} {hour}:{minute_val}'
         # by using a dictionary we let the data structure do the bucketing for us.
         if key not in buckets:
