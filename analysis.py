@@ -127,20 +127,11 @@ if __name__ == '__main__':
     clf.fit(x, y)
     print(f'coefficient is {clf.coef_}')
 
+def perform_arma():
+    # ARMA TESTING
+    model = sm.tsa.ARMA(my_df['Return'], (10, 5))
+    res= model.fit()
 
-
-
-# KFOLD TESTING
-# kf = KFold(n_splits=3)
-# for train_index, test_index in kf.split(returns):
-#     print(train_index, ' ', test_index)
-
-# ARMA TESTING
-
-# model = sm.tsa.ARMA(my_df['Return'], (10, 5))
-# res= model.fit()
-#
-#
-# things = res.plot_predict(start=len(my_df)- 5, end=len(my_df) + 2)
-# plt.show()
+    things = res.plot_predict(start=len(my_df)- 5, end=len(my_df) + 2)
+    plt.show()
 
