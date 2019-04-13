@@ -1,3 +1,4 @@
+import numpy as np
 import os
 import pandas
 import requests
@@ -83,6 +84,18 @@ def build_ar_x_y(array, p, column=None):
         y.append(array[i])
         x.append(array[i-p:i])
     return x, y
+
+
+def col_index(column):
+    """
+    Get index of a column name based upon the 'xetra' data_columns, used to write files.
+    :param column: string name of column to get index
+    :return: integer (index of column in 'xetra' data_columns.
+    """
+    if column in data_columns['xetra']:
+        return data_columns['xetra'].index(column)
+    else:
+        return None
 
 
 def download(date, api, api_key, dirpath, stock_query=None):
@@ -209,17 +222,16 @@ def make_price_df(stock, start, end=None, interval=30, dirpath='./'):
         if os.path.isfile(filename):
             df = pandas.read_feather(filename, columns=data_columns['xetra'])
             data.extend(df.values.tolist())
-    data = pandas.DataFrame(data, columns=data_columns['xetra'])
     buckets = OrderedDict()
-    for index, row in data.iterrows():
-        date = row['Date']
-        hour, minutes = row['Time'].split(':')
+    for row in data:
+        date = row[col_index('Date')]
+        hour, minutes = row[col_index('Time')].split(':')
         if int(hour) < 7:  # Price adjustements are recorded as pre-open trades. We omit them from analysis.
             continue
-        price = row['EndPrice']
-        volume = row['NumberOfTrades']
+        price = row[col_index('EndPrice')]
+        volume = row[col_index('NumberOfTrades')]
         minute_val = interval * (int(minutes) // interval)
-        minute_val = str(minute_val) if minute_val > 10 else '0' + str(minute_val)
+        minute_val = str(minute_val) if minute_val >= 10 else '0' + str(minute_val)
         key = f'{date} {hour}:{minute_val}'
         # by using a dictionary we let the data structure do the bucketing for us.
         if key not in buckets:
@@ -327,16 +339,15 @@ def make_return_df(stock, start, end=None, interval=30, dirpath='./', ignore_mis
         if os.path.isfile(filename):
             df = pandas.read_feather(filename, columns=data_columns['xetra'])
             data.extend(df.values.tolist())
-    data = pandas.DataFrame(data, columns=data_columns['xetra'])
     buckets = OrderedDict()
-    for index, row in data.iterrows():
-        date = row['Date']
-        hour, minutes = row['Time'].split(':')
+    for row in data:
+        date = row[col_index('Date')]
+        hour, minutes = row[col_index('Time')].split(':')
         if int(hour) < 7:  # Price adjustements are recorded as pre-open trades. We omit them from analysis.
             continue
-        price = row['EndPrice']
+        price = row[col_index('EndPrice')]
         minute_val = interval * (int(minutes) // interval)
-        minute_val = str(minute_val) if minute_val > 10 else '0' + str(minute_val)
+        minute_val = str(minute_val) if minute_val >= 10 else '0' + str(minute_val)
         key = f'{date} {hour}:{minute_val}'
         # by using a dictionary we let the data structure do the bucketing for us.
         if key not in buckets:
@@ -369,8 +380,8 @@ def split_data(X, Y, percentage_to_evaluate):
     evaluation_set_x = X[len(X) - evaluation_set_count:]
     x = X[:len(X) - evaluation_set_count]
     evaluation_set_y = Y[len(X) - evaluation_set_count:]
-    y = X[:len(X) - evaluation_set_count]
-    return x, evaluation_set_x, y, evaluation_set_y
+    y = Y[:len(X) - evaluation_set_count]
+    return np.array(x), np.array(evaluation_set_x), np.array(y), np.array(evaluation_set_y)
 
 
 def trading_daterange(start, end):
