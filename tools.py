@@ -52,8 +52,8 @@ def build_x_y(return_df, window, alpha):
     sma_df = make_sma_df(return_df, window)
 
     return_df = return_df.loc[window:]
-    ema_df = ema_df.loc[:len(ema_df) - 2]
-    sma_df = sma_df.loc[:len(sma_df) - 2]
+    ema_df = ema_df.loc[:len(ema_df) - 2]  # offset 1
+    sma_df = sma_df.loc[:len(sma_df) - 2]  # offset 1
 
     assert len(return_df) == len(ema_df) == len(sma_df)
     return_df = return_df.reset_index(drop=True)
@@ -198,7 +198,7 @@ def make_ema_df(data, window, alpha):
     return ema_df
 
 
-def make_price_df(stock, start, end=None, interval=30, dirpath='./'):
+def make_price_df(stock, start, end=None, interval=30, ignore_missing_data=False, dirpath='./'):
     """Given a stock, a start date, end date optional, we return a prices dataframe with column headings
     ['Mnemonic', 'Date', 'Time', 'Price'].
     :param stock: Mnemonic string
@@ -216,9 +216,10 @@ def make_price_df(stock, start, end=None, interval=30, dirpath='./'):
     data = []
     for date in trading_daterange(start, end):
         filename = dirpath + 'xetra/' + f'{stock}-{date}.feather'  # We always assume that the file is in ./xetra
-        if not os.path.isfile(filename):
-            # If data does not yet exist, we download it first.
-            download(date, 'xetra', open('apikey', 'r').readline().strip(), dirpath, stock)
+        if not ignore_missing_data:
+            if not os.path.isfile(filename):
+                # If data does not yet exist, we download it first.
+                download(date, 'xetra', open('apikey', 'r').readline().strip(), dirpath, stock)
         if os.path.isfile(filename):
             df = pandas.read_feather(filename, columns=data_columns['xetra'])
             data.extend(df.values.tolist())
