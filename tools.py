@@ -410,15 +410,10 @@ def make_index_price_df(*dfs):
     """
     if len(dfs) == 0:
         raise ValueError('Must pass in one or more DataFrames.')
+
     for df in dfs:
-        if type(df) is not pandas.DataFrame:
-            raise ValueError(f'input must be pandas DataFrame.')
         expected_columns = ['Date', 'Time', 'Price']
-        for column in expected_columns:
-            if column not in df.columns:
-                raise ValueError(f'DataFrame should have column: {column}.')
-        if len(df) == 0:
-            raise ValueError(f'Length of DataFrame must be greater than 0.')
+        validate_df(df, expected_columns)
 
     # Form new DataFrame with the correct format.
     index_df = dfs[0]
@@ -438,4 +433,19 @@ def make_index_price_df(*dfs):
     index_df['Price_Index'] = index_prices
 
     return index_df
+
+def validate_df(df, expected_columns):
+    """
+    Given an object checks to make sure that it is a DataFrame, has elements, and has the expected columns.
+    :param df:
+    :param expected_columns:
+    :return:
+    """
+    if type(df) is not pandas.DataFrame:
+        raise ValueError(f'Index should be DataFrame not {type(df)}')
+    for column in expected_columns:
+        if column not in df.columns:
+            raise ValueError(f'DataFrame should have column: {column}.')
+    if len(df) == 0:
+        raise ValueError(f'Length of DataFrame must be greater than 0.')
 
