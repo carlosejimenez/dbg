@@ -131,6 +131,24 @@ def download(date, api, api_key, dirpath, stock_query=None):
             print(f'\r{api}-{stock_name} failed to write for date {date}')
 
 
+def get_signed_ratio(predictions, actuals):
+    """
+    Given predictions and the actual values of those predictions comes up with the signed ratio as a form of evaluation.
+    :param predictions: a list of predictions.
+    :param actuals: a list of measured results to compare against the actuals.
+    :return: a ratio of how frequently the predictions and the actuals share the same sign.
+    """
+    ratio = 0
+    if len(predictions) != len(actuals):
+        raise ValueError(f'length of predictions not equal, {len(predictions)} != {len(actuals)}')
+    for predict, act in zip(predictions, actuals):
+        if predict > 0 and act > 0:
+            ratio += 1
+        elif predict < 0 and act < 0:
+            ratio += 1
+    return ratio /len(actuals)
+
+
 def make_ema_df(data, window, alpha):
     """Given a return dataframe, returns the ema for each point in the dataframe based on parameters.
 
@@ -323,6 +341,16 @@ def make_return_df(stock, start, end=None, interval=30, dirpath='./', difference
         return_list.append([stock, date, time, ret])
     return_df = pandas.DataFrame(return_list, columns=['Mnemonic', 'Date', 'Time', 'Return'])
     return return_df
+
+
+def split_data(X, Y, percentage_to_evaluate):
+    # Slice out evaluation set.
+    evaluation_set_count = int(len(X) * percentage_to_evaluate)
+    evaluation_set_x = X[len(X) - evaluation_set_count:]
+    x = X[:len(X) - evaluation_set_count]
+    evaluation_set_y = Y[len(X) - evaluation_set_count:]
+    y = X[:len(X) - evaluation_set_count]
+    return x, evaluation_set_x, y, evaluation_set_y
 
 
 def trading_daterange(start, end):
