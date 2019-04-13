@@ -398,6 +398,35 @@ def trading_daterange(start, end):
         else:
             continue
 
+
+def seperate_index(index_df):
+    """
+    Breaks a DataFrame for an Index into several DataFrames one for the index and Each Stock."
+    :param index_df: A DataFrame from the function make_index_price_df.
+    :return: A list of DataFrames with columns Date, Time, Price, and Mnemonic.
+    """
+    expected_columns = ['Date', 'Time', 'Price_Index']
+    validate_df(index_df, expected_columns)
+
+    dfs = []
+
+    prices = index_df[index_df.columns[2:]]
+    price_columns = prices.columns
+
+    for price_name in price_columns:
+        df = index_df[['Date', 'Time']]
+        df[price_name] = index_df[price_name]
+
+        price_column_name = df.columns[2]
+        df['Mnemonic'] = price_name.lstrip('Price_')
+        df = df.rename_axis({price_column_name: 'Price'}, axis=1)
+
+        dfs.append(df)
+
+    return dfs
+
+
+
 def make_index_price_df(*dfs):
     """
     Given a list of stock DataFrames will return a new DataFrame representing an index composed of those stocks.
