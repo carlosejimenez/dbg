@@ -449,3 +449,16 @@ def validate_df(df, expected_columns):
     if len(df) == 0:
         raise ValueError(f'Length of DataFrame must be greater than 0.')
 
+class StatisticalArbitrage():
+    def __init__(self, index):
+        expected_columns = ['Date', 'Time', 'Price_Index']
+        validate_df(index, expected_columns)
+
+
+
+
+
+
+
+
+
