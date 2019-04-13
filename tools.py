@@ -397,3 +397,56 @@ def trading_daterange(start, end):
             yield day.date()
         else:
             continue
+
+def make_index_price_df(*dfs):
+    """
+    Given a list of stock DataFrames will return a new DataFrame representing an index composed of those stocks.
+    The index price is the average price of the stocks.
+    Mnemonic columns are removed and price labels are changed from 'Price' to 'Price_Mnemonic'. e.g. Price_BMW.
+    Not all stock are traded every minute. Thus, nan values are first forward filled and then backward filled. This
+    implies that if you want form an index you should have stock prices over the same range. Otherwise, the prices
+    will be inaccurate after filling.
+    :param dfs: A list of DataFrames representing a stock price with columns 'Date', 'Time', and 'Price'.
+    :return: A DataFrame with Date, Time, Stock_price(s), and Index_price.
+    """
+    if len(dfs) == 0:
+        raise ValueError('Must pass in one or more DataFrames.')
+
+    for df in dfs:
+        expected_columns = ['Date', 'Time', 'Price']
+        validate_df(df, expected_columns)
+
+    # Form new DataFrame with the correct format.
+    index_df = dfs[0]
+    index_df = index_df.rename(columns={'Price': f"Price_{index_df['Mnemonic'][0]}"})
+    index_df = index_df.drop('Mnemonic', axis=1)
+    for df in dfs[1:]:
+        current_df = df
+        current_df = current_df.rename(columns={'Price': f"Price_{current_df['Mnemonic'][0]}"})
+        current_df = current_df.drop('Mnemonic', axis=1)
+        index_df =  pandas.merge(index_df, current_df, how='outer', on=['Date', 'Time'])
+    index_df = index_df.sort_values(by=['Date', 'Time'])
+    index_df = index_df.fillna(method='ffill').fillna(method='bfill')
+
+    # Add index prices to DataFrame.
+    price_columns = index_df.columns[2:]
+    index_prices = index_df[price_columns].apply(lambda row: sum(row)/len(row), axis=1)
+    index_df['Price_Index'] = index_prices
+
+    return index_df
+
+def validate_df(df, expected_columns):
+    """
+    Given an object checks to make sure that it is a DataFrame, has elements, and has the expected columns.
+    :param df:
+    :param expected_columns:
+    :return:
+    """
+    if type(df) is not pandas.DataFrame:
+        raise ValueError(f'Index should be DataFrame not {type(df)}')
+    for column in expected_columns:
+        if column not in df.columns:
+            raise ValueError(f'DataFrame should have column: {column}.')
+    if len(df) == 0:
+        raise ValueError(f'Length of DataFrame must be greater than 0.')
+
