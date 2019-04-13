@@ -1,3 +1,4 @@
+import numpy as np
 import os
 import pandas
 import requests
@@ -369,8 +370,8 @@ def split_data(X, Y, percentage_to_evaluate):
     evaluation_set_x = X[len(X) - evaluation_set_count:]
     x = X[:len(X) - evaluation_set_count]
     evaluation_set_y = Y[len(X) - evaluation_set_count:]
-    y = X[:len(X) - evaluation_set_count]
-    return x, evaluation_set_x, y, evaluation_set_y
+    y = Y[:len(X) - evaluation_set_count]
+    return np.array(x), np.array(evaluation_set_x), np.array(y), np.array(evaluation_set_y)
 
 
 def trading_daterange(start, end):
