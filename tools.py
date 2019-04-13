@@ -63,6 +63,20 @@ def build_x_y(return_df, window, alpha):
     return X, Y
 
 
+def build_ar_x_y(array, p, column=None):
+    if column:
+        array = array[column].tolist()
+    else:
+        array = array.tolist()
+    assert p < len(array)
+    x = []
+    y = []
+    for i in range(p, len(array)):
+        y.append(array[i])
+        x.append(array[i-p:i])
+    return x, y
+
+
 def download(date, api, api_key, dirpath, stock_query=None):
     """download feather archive files for all DAX stocks from Xetra for a particular date (YYYY-MM-DD).
     downloaded data schema is 'Mnemonic', 'Date', 'Time', 'StartPrice', 'MaxPrice',
@@ -161,7 +175,6 @@ def make_price_df(stock, start, end=None, interval=30, dirpath='./'):
     end = end if end else start
     dirpath = dirpath if dirpath[-1] == '/' else dirpath + '/'
     data = []
-    starttime = datetime.now()
     for date in trading_daterange(start, end):
         filename = dirpath + 'xetra/' + f'{stock}-{date}.feather'  # We always assume that the file is in ./xetra
         if not os.path.isfile(filename):
@@ -171,7 +184,6 @@ def make_price_df(stock, start, end=None, interval=30, dirpath='./'):
             df = pandas.read_feather(filename, columns=data_columns['xetra'])
             data.extend(df.values.tolist())
     data = pandas.DataFrame(data, columns=data_columns['xetra'])
-    print(f'{(datetime.now() - starttime).seconds} seconds')
     buckets = OrderedDict()
     for index, row in data.iterrows():
         date = row['Date']
@@ -235,6 +247,23 @@ def make_sma_df(data, window):
     return sma_df
 
 
+def price_to_return_df(price_df, difference=False):
+    return_list = []
+    price_items = price_df['Price'].tolist()
+    metadata = price_df.get(['Mnemonic', 'Date', 'Time']).values.tolist()
+    for index in range(1, len(price_items)):
+        old_price = price_items[index-1]
+        price = price_items[index]
+        if difference:
+            ret = price - float(old_price)
+        else:
+            ret = (price - float(old_price)) / float(old_price)
+        metadata[index].append(ret)
+        return_list.append(metadata[index])
+    return_df = pandas.DataFrame(return_list, columns=['Mnemonic', 'Date', 'Time', 'Return'])
+    return return_df
+
+
 def make_return_df(stock, start, end=None, interval=30, dirpath='./', difference=False):
     """Given a stock, a start date, end date optional, we return a returns dataframe with column headings
     ['Mnemonic', 'Date', 'Time', 'Return'].
@@ -252,7 +281,6 @@ def make_return_df(stock, start, end=None, interval=30, dirpath='./', difference
     end = end if end else start
     dirpath = dirpath if dirpath[-1] == '/' else dirpath + '/'
     data = []
-    starttime = datetime.now()
     for date in trading_daterange(start, end):
         filename = dirpath + 'xetra/' + f'{stock}-{date}.feather'  # We always assume that the file is in ./xetra
         if not os.path.isfile(filename):
@@ -262,7 +290,6 @@ def make_return_df(stock, start, end=None, interval=30, dirpath='./', difference
             df = pandas.read_feather(filename, columns=data_columns['xetra'])
             data.extend(df.values.tolist())
     data = pandas.DataFrame(data, columns=data_columns['xetra'])
-    print(f'{(datetime.now() - starttime).seconds} seconds')
     buckets = OrderedDict()
     for index, row in data.iterrows():
         date = row['Date']
