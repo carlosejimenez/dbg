@@ -64,6 +64,14 @@ def build_x_y(return_df, window, alpha):
 
 
 def build_ar_x_y(array, p, column=None):
+    """
+    Makes an AR(p) process dataset, for a single array, or dataframe column if it is specified.
+    Essentially, this produces a shifted lag dataset.
+    :param array: Array, or dataframe on which to construct the dataset.
+    :param p: AR(p), the number of values contained in the dependent vars vector.
+    :param column: optional, use for dataset parameter; which column should we construct X, Y for?
+    :return: two lists, x and y, where x is a list of vectors, and y is the associated labels.
+    """
     if column:
         array = array[column].tolist()
     else:
@@ -234,6 +242,11 @@ def make_price_df(stock, start, end=None, interval=30, dirpath='./'):
 
 
 def get_weighted_avg(tuples_list):
+    """
+    Creates a weighted average from a list of weight, value tuples.
+    :param tuples_list: [(volume, price) ...] typically will be used to make a weighted average.
+    :return: a float.
+    """
     size = sum([w[0] for w in tuples_list])
     avg = sum(map(lambda w: w[0]*w[1], tuples_list))/size
     return avg
@@ -266,6 +279,12 @@ def make_sma_df(data, window):
 
 
 def price_to_return_df(price_df, difference=False):
+    """
+    Converts a price dataframe to a corresponding return dataframe. Useful for analysis that uses both values.
+    :param price_df: price dataframe from make_price_df()
+    :param difference: Can calculate price difference instead of return if set True.
+    :return: return dataframe, analogous to make_return_df.
+    """
     return_list = []
     price_items = price_df['Price'].tolist()
     metadata = price_df.get(['Mnemonic', 'Date', 'Time']).values.tolist()

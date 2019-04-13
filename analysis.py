@@ -99,6 +99,7 @@ if __name__ == '__main__':
     clf.fit(x, y)
     print(f'coefficient is {clf.coef_}')
 
+
 def perform_arma():
     # ARMA TESTING
     model = sm.tsa.ARMA(my_df['Return'], (10, 5))
