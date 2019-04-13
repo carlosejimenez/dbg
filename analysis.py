@@ -1,10 +1,13 @@
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 from datetime import date, timedelta
 import numpy as np
+import datetime
 import math
 import statsmodels.api as sm
 from sklearn import linear_model, metrics
 from sklearn.linear_model import LassoCV, RidgeCV, Lasso, Ridge
+
 
 import tools
 
@@ -71,19 +74,47 @@ def run_regression_return_score(regression_function, X, Y, alphas, cv=None):
                 best_alpha = alpha
         return best_score, best_alpha
 
+def graph_returns(return_data_frame):
+    print(return_data_frame.columns)
+    if 'Date' not in return_data_frame.columns:
+        raise ValueError(f'dataframe should have column: Data')
+    if 'Return' not in return_data_frame.columns:
+        raise ValueError(f'dataframe should have column: Return')
+
+    years = mdates.YearLocator()
+    months = mdates.MonthLocator()
+
+    fig, ax = plt.subplots()
+
+    dates = [datetime.datetime.fromisoformat(x).date() for x in return_data_frame['Date']]
+
+    ax.scatter(dates, return_data_frame['Return'], marker='.')
+    ax.xaxis.set_minor_locator(months)
+    ax.xaxis.set_minor_formatter(mdates.DateFormatter(''))
+    ax.xaxis.set_major_locator(years)
+    years_formator = mdates.DateFormatter('%Y')
+    ax.xaxis.set_major_formatter(years_formator)
+    ax.grid(True)
+
+    ax.format_xdata = mdates.DateFormatter('%Y-%m-%d')
+
+    plt.show()
+
+
 
 if __name__ == '__main__':
-    first_day = '2017-06-17'
+    first_day = '2018-06-17'
     yesterday = date.today() - timedelta(1)
 
     percentage_to_evaluate = 0.05
 
-    interval_length = 5
+    interval_length = 1
     window_length = 10
     ema_hyper_parameter = 0.2
     k_fold_hyperparameter = 6
 
     my_df = tools.make_return_df('BMW', first_day, yesterday.strftime('%Y-%m-%d'), interval=interval_length)
+    graph_returns(my_df)
 
     x, y = tools.build_x_y(my_df, window_length, ema_hyper_parameter)
 
@@ -96,67 +127,6 @@ if __name__ == '__main__':
     clf.fit(x, y)
     print(f'coefficient is {clf.coef_}')
 
-    print(clf.score(evaluation_set_x, evaluation_set_y))
-
-
-
-# clf = LassoCV(np.arange(0.01, 1, 0.01), 6)
-# clf.fit(x, y)
-# print(clf.score(evaluation_set_x, evaluation_set_y))
-
-# print(f'Ridge CV, {run_regression_return_score(RidgeCV, x, y, alphas_ridge, 6)}')
-# print(f'Ridge standard, {run_regression_return_score(Ridge, x, y, alphas_ridge)}')
-# print(f'Lasso CV, {run_regression_return_score(LassoCV, x, y, alphas_lasso, 6)}')
-# print(f'Lasso standard, {run_regression_return_score(Lasso, x, y, alphas_lasso)}')
-
-
-
-
-
-# alpha_evaluation.append((alpha, score))
-
-# plot_x = [x[0] for x in alpha_evaluation]
-# plot_y = [y[1] for y in alpha_evaluation]
-# plt.plot(plot_x, plot_y)
-# plt.show()
-# plt.savefig('interval_60_alpha_test_without_lasso.png')
-
-
-# regr = linear_model.LinearRegression()
-# regr.fit(training_set_x, training_set_y)
-
-
-
-# predictions_y = regr.predict(test_set_x)
-# print(regr.coef_)
-# print(metrics.mean_squared_error(test_set_y, predictions_y))
-# print(metrics.r2_score(test_set_y, predictions_y))
-
-
-
-
-
-
-
-# GRAPH BMW RETURNS
-# years = mdates.YearLocator()
-# months = mdates.MonthLocator()
-#
-# fig, ax = plt.subplots()
-
-# dates = [datetime.datetime.fromisoformat(x).date() for x in my_df['Date']]
-
-# ax.plot(dates, my_df['Return'])
-# ax.xaxis.set_minor_locator(months)
-# ax.xaxis.set_minor_formatter(mdates.DateFormatter(''))
-# ax.xaxis.set_major_locator(years)
-# years_formator = mdates.DateFormatter('%Y')
-# ax.xaxis.set_major_formatter(years_formator)
-# ax.grid(True)
-
-# ax.format_xdata = mdates.DateFormatter('%Y-%m-%d')
-
-# plt.show()
 
 
 
