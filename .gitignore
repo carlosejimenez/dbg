@@ -114,6 +114,8 @@ apikey
 
 # data files
 data/
+failed_to_write.txt
+xetra
 
 # .DS_Store
 .DS_Store

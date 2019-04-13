@@ -1,14 +1,8 @@
-import itertools
-    
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 from datetime import date, timedelta
-import time
 import numpy as np
 import math
-from threading import Thread
 import statsmodels.api as sm
-from sklearn.model_selection import KFold
 from sklearn import linear_model, metrics
 from sklearn.linear_model import LassoCV, RidgeCV, Lasso, Ridge
 
@@ -23,6 +17,23 @@ def split_data(X, Y, percentage_to_evaluate):
     evaluation_set_y = Y[len(X) - evaluation_set_count:]
     y = X[:len(X) - evaluation_set_count]
     return x, evaluation_set_x, y, evaluation_set_y
+
+def get_signed_ratio(predictions, actuals):
+    """
+    Given predictions and the actual values of those predictions comes up with the signed ratio as a form of evaluation.
+    :param predictions: a list of predictions.
+    :param actuals: a list of measured results to compare against the actuals.
+    :return: a ratio of how frequently the predictions and the actuals share the same sign.
+    """
+    ratio = 0
+    if len(predictions) != len(actuals):
+        raise ValueError(f'length of predictions not equal, {len(predictions)} != {len(actuals)}')
+    for predict, act in zip(predictions, actuals):
+        if predict > 0 and act > 0:
+            ratio += 1
+        elif predict < 0 and act < 0:
+            ratio += 1
+    return ratio /len(actuals)
 
 
 def run_regression_return_score(regression_function, X, Y, alphas, cv=None):
@@ -88,6 +99,7 @@ if __name__ == '__main__':
     print(clf.score(evaluation_set_x, evaluation_set_y))
 
 
+
 # clf = LassoCV(np.arange(0.01, 1, 0.01), 6)
 # clf.fit(x, y)
 # print(clf.score(evaluation_set_x, evaluation_set_y))
@@ -113,7 +125,6 @@ if __name__ == '__main__':
 # regr = linear_model.LinearRegression()
 # regr.fit(training_set_x, training_set_y)
 
-exit(-1)
 
 
 # predictions_y = regr.predict(test_set_x)
