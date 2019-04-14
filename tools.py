@@ -403,6 +403,35 @@ def trading_daterange(start, end):
         else:
             continue
 
+
+def seperate_index(index_df):
+    """
+    Breaks a DataFrame for an Index into several DataFrames one for the index and Each Stock."
+    :param index_df: A DataFrame from the function make_index_price_df.
+    :return: A list of DataFrames with columns Date, Time, Price, and Mnemonic.
+    """
+    expected_columns = ['Date', 'Time', 'Price_Index']
+    validate_df(index_df, expected_columns)
+
+    dfs = []
+
+    prices = index_df[index_df.columns[2:]]
+    price_columns = prices.columns
+
+    for price_name in price_columns:
+        df = index_df[['Date', 'Time']]
+        df[price_name] = index_df[price_name]
+
+        price_column_name = df.columns[2]
+        df['Mnemonic'] = price_name.lstrip('Price_')
+        df = df.rename({price_column_name: 'Price'}, axis=1)
+
+        dfs.append(df)
+
+    return dfs
+
+
+
 def make_index_price_df(*dfs):
     """
     Given a list of stock DataFrames will return a new DataFrame representing an index composed of those stocks.
@@ -421,17 +450,7 @@ def make_index_price_df(*dfs):
         expected_columns = ['Date', 'Time', 'Price']
         validate_df(df, expected_columns)
 
-    # Form new DataFrame with the correct format.
-    index_df = dfs[0]
-    index_df = index_df.rename(columns={'Price': f"Price_{index_df['Mnemonic'][0]}"})
-    index_df = index_df.drop('Mnemonic', axis=1)
-    for df in dfs[1:]:
-        current_df = df
-        current_df = current_df.rename(columns={'Price': f"Price_{current_df['Mnemonic'][0]}"})
-        current_df = current_df.drop('Mnemonic', axis=1)
-        index_df =  pandas.merge(index_df, current_df, how='outer', on=['Date', 'Time'])
-    index_df = index_df.sort_values(by=['Date', 'Time'])
-    index_df = index_df.fillna(method='ffill').fillna(method='bfill')
+    index_df = combine_stock_dfs(dfs)
 
     # Add index prices to DataFrame.
     price_columns = index_df.columns[2:]
@@ -439,6 +458,35 @@ def make_index_price_df(*dfs):
     index_df['Price_Index'] = index_prices
 
     return index_df
+
+
+def combine_stock_dfs(dfs, type='Price'):
+    """
+    combine_stock_dfs if given a list of security Dataframes returns a larger DataFrame that merged dates.
+    Note that this function fills in empty prices (the stock wasn't traded that minute) by first forward filling then
+    back filling.
+    :param dfs: A list of security DataFrames to combine.
+    :return:
+    """
+    if type is not 'Price' and type is not 'Return':
+        raise ValueError('type must be either "Price" or "Return".')
+
+    for df in dfs:
+        expected_columns = ['Date', 'Time', type]
+        validate_df(df, expected_columns)
+
+    combined_df = dfs[0]
+    combined_df = combined_df.rename(columns={f'{type}': f"{type}_{combined_df['Mnemonic'][0]}"})
+    combined_df = combined_df.drop('Mnemonic', axis=1)
+    for df in dfs[1:]:
+        current_df = df
+        current_df = current_df.rename(columns={f'{type}': f"{type}_{current_df['Mnemonic'][0]}"})
+        current_df = current_df.drop('Mnemonic', axis=1)
+        combined_df = pandas.merge(combined_df, current_df, how='outer', on=['Date', 'Time'])
+    combined_df = combined_df.sort_values(by=['Date', 'Time'])
+    combined_df = combined_df.fillna(method='ffill').fillna(method='bfill')
+    return combined_df
+
 
 def validate_df(df, expected_columns):
     """
@@ -454,4 +502,17 @@ def validate_df(df, expected_columns):
             raise ValueError(f'DataFrame should have column: {column}.')
     if len(df) == 0:
         raise ValueError(f'Length of DataFrame must be greater than 0.')
+
+class StatisticalArbitrage():
+    def __init__(self, index):
+        expected_columns = ['Date', 'Time', 'Price_Index']
+        validate_df(index, expected_columns)
+
+
+
+
+
+
+
+
 
