@@ -210,6 +210,7 @@ def make_market_df(start='2019-01-01', end=None, interval=30, ignore_missing_dat
         sec = make_price_df(stock, start, end, interval, ignore_missing_data)
         securities.append(sec)
     market_index = make_index_price_df(*securities)
+    return market_index
 
 def make_price_df(stock, start, end=None, interval=30, ignore_missing_data=False, dirpath='./'):
     """Given a stock, a start date, end date optional, we return a prices dataframe with column headings
