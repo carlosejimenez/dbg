@@ -1,8 +1,10 @@
 import numpy as np
 import os
 import pandas
+from sklearn import linear_model
 import requests
 import statistics
+from collections import namedtuple
 from threading import Lock
 
 from collections import OrderedDict
@@ -498,11 +500,63 @@ def validate_df(df, expected_columns):
     if len(df) == 0:
         raise ValueError(f'Length of DataFrame must be greater than 0.')
 
-class StatisticalArbitrage():
+class StatisticalArbitrage:
+    betas = namedtuple('Beta', 'beta_not, beta')
+
     def __init__(self, index):
-        expected_columns = ['Date', 'Time', 'Price_Index']
+        expected_columns = ['Date', 'Time', 'Return_Index']
         validate_df(index, expected_columns)
 
+        self.stock_names = self._get_stock_names(index)
+        self.data = index
+        self.hyper_parameters = pandas.DataFrame(columns=self.stock_names)
+        self._update_hyper_parameters()
+
+
+    def _get_stock_names(self, index):
+        return_names = list(index.columns)
+        del return_names[return_names.index('Date')]
+        del return_names[return_names.index('Time')]
+        del return_names[return_names.index('Return_Index')]
+        return return_names
+
+
+    def _update_hyper_parameters(self):
+        for stock in self.stock_names:
+            observations = len(self.data)
+            reg_1 = linear_model.LinearRegression(fit_intercept=True)
+            dependent_var = np.array(self.data[stock]).reshape(-1, 1)
+            independent_var = np.array(self.data['Return_Index']).reshape(-1, 1)
+            reg_1.fit(independent_var, dependent_var)
+            beta =  reg_1.coef_[0][0]
+            self.hyper_parameters.loc['Beta', stock]  = beta
+            beta_0 =  reg_1.intercept_[0]
+            self.hyper_parameters.loc['Beta_0', stock] = beta_0
+            self.hyper_parameters.loc['alpha', stock] = beta_0*observations # that is divide by delta_time
+
+            residuals = dependent_var - beta_0 - beta*independent_var
+            X = np.cumsum(residuals)
+            X_prime = X.copy()
+            X = X[:len(X) - 1]
+            X_prime = X_prime[1:]
+            reg_2 = linear_model.LinearRegression(fit_intercept=True)
+            reg_2.fit(X.reshape(-1, 1), X_prime.reshape(-1, 1))
+            b = reg_2.coef_[0][0]
+            self.hyper_parameters.loc['b', stock]  = b
+            a = reg_2.intercept_[0]
+            self.hyper_parameters.loc['a', stock] = a
+
+            zeta = X_prime - a - b * X
+            kappa = -np.log(b)*observations
+            self.hyper_parameters.loc['Kappa', stock] = kappa
+            mean = a/(1 - b)
+            self.hyper_parameters.loc['Mean', stock] = mean
+            # sigma = np.sqrt(np.var(zeta)*2*kappa/(1 - b**2))
+            sigma_eq = np.sqrt(np.var(zeta)/(1-b**2))
+            self.hyper_parameters.loc['Sigma_eq', stock] = sigma_eq
+
+
+        print('thing')
 
 
 
