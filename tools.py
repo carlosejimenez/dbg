@@ -202,6 +202,7 @@ def make_ema_df(data, window, alpha, column='Return'):
     ema_df['EMA'] = ema
     return ema_df
 
+
 def make_market_df(start='2019-01-01', end=None, interval=30, ignore_missing_data=False):
     global stock, market_index
     mnemonics = dax.keys()
@@ -211,6 +212,7 @@ def make_market_df(start='2019-01-01', end=None, interval=30, ignore_missing_dat
         securities.append(sec)
     market_index = make_index_price_df(*securities)
     return market_index
+
 
 def make_price_df(stock, start, end=None, interval=30, ignore_missing_data=False, dirpath='./'):
     """Given a stock, a start date, end date optional, we return a prices dataframe with column headings
@@ -400,6 +402,18 @@ def split_data(X, Y, test_ratio, purge_ratio=0.0):
     evaluation_set_y = Y[len(X) - evaluation_set_count:]
     y = Y[:len(X) - evaluation_set_count - purge_set_count]
     return np.array(x), np.array(evaluation_set_x), np.array(y), np.array(evaluation_set_y)
+
+
+def split_dataframe(df, test_ratio, purge_ratio=0.0):
+    # Slice out evaluation set.
+    assert purge_ratio + test_ratio < 1
+    df_cols = df.columns
+    df = [list(val[1]) for val in df.iterrows()]  # extract only rows of real data without column names.
+    evaluation_set_count = int(len(df) * test_ratio)
+    purge_set_count = int(len(df) * purge_ratio)
+    evaluation_set = df[len(df) - evaluation_set_count:]
+    df = df[:len(df) - evaluation_set_count - purge_set_count]
+    return pandas.DataFrame(df, columns=df_cols), pandas.DataFrame(evaluation_set, columns=df_cols)
 
 
 def trading_daterange(start, end):
