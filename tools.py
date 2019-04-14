@@ -37,28 +37,29 @@ holidays = ['2018-03-30', '2018-04-02', '2018-05-01', '2018-05-21', '2018-10-03'
 lock = Lock()
 
 
-def build_x_y(return_df, window, alpha):
+def build_x_y(df, window, alpha, column='Return'):
     """
     Given a returns dataframe, we construct the EMA, SMA feature vectors returned as X, and the associated labels,
     offset 1, returned as Y.
     :param return_df: returns dataframe
     :param window: window for EMA, SMA
     :param alpha: alpha for EMA
+    :param column: Column to build EMA and SMA over. Default "Return", can change to "Price".
     :return: X, Y tuple
     """
-    assert type(return_df) == pandas.DataFrame
+    assert type(df) == pandas.DataFrame
 
-    ema_df = make_ema_df(return_df, window, alpha)
-    sma_df = make_sma_df(return_df, window)
+    ema_df = make_ema_df(df, window, alpha, column=column)
+    sma_df = make_sma_df(df, window, column=column)
 
-    return_df = return_df.loc[window:]
+    df = df.loc[window:]
     ema_df = ema_df.loc[:len(ema_df) - 2]  # offset 1
     sma_df = sma_df.loc[:len(sma_df) - 2]  # offset 1
 
-    assert len(return_df) == len(ema_df) == len(sma_df)
-    return_df = return_df.reset_index(drop=True)
+    assert len(df) == len(ema_df) == len(sma_df)
+    return_df = df.reset_index(drop=True)
 
-    Y = list(return_df['Return'])
+    Y = list(return_df[column])
     X = list(zip(ema_df['EMA'], sma_df['SMA']))
 
     return X, Y
@@ -170,12 +171,13 @@ def get_signed_ratio(predictions, actuals):
     return ratio /len(actuals)
 
 
-def make_ema_df(data, window, alpha):
+def make_ema_df(data, window, alpha, column='Return'):
     """Given a return dataframe, returns the ema for each point in the dataframe based on parameters.
 
     :param data: a return dataframe
     :param window: int, ema's moving window
     :param alpha: weight in (0, 1)
+    :param column: Column name, default "Return", can change to "Price"
     :return: ema dataframe with original dataframe - window points
     """
     if len(data) < window:
@@ -183,11 +185,11 @@ def make_ema_df(data, window, alpha):
     if not 0 <= alpha <= 1:
         raise ValueError(f'alpha: {alpha} not in bounds of (0, 1)')
     # splicing does NOT work the same in pandas as in Python. Pandas include spliced value when head splicing.
-    ema = [statistics.mean(data['Return'].loc[:window-1])]
+    ema = [statistics.mean(data[column].loc[:window-1])]
     # window-2: because we already added a value to ema.
     ema_df = data[['Mnemonic', 'Date', 'Time']].loc[window-1:]
     # Pandas excludes the spliced value whe tail splicing.
-    returns = data['Return'].loc[window:]
+    returns = data[column].loc[window:]
     for value in returns:
         ema_point = alpha * value + (1-alpha) * ema[-1]
         ema.append(ema_point)
@@ -265,10 +267,11 @@ def get_weighted_avg(tuples_list):
     return avg
 
 
-def make_sma_df(data, window):
+def make_sma_df(data, window, column="Return"):
     """Given a return dataframe, returns the sma for each point in the dataframe.
     :param data: return dataframe
     :param window: int, sma's moving window
+    :param column: Column to index, Default "Return", can change to "Price".
     :return:
     """
     if len(data) < window:
@@ -276,10 +279,10 @@ def make_sma_df(data, window):
     # window-2: because we initialize sma with a value already.
     sma_df = data[['Mnemonic', 'Date', 'Time']].loc[window - 1:]
     # splicing does NOT work the same in pandas as in Python. Pandas includes spliced value when head splicing.
-    window_list = list(data['Return'].loc[:window - 1])
+    window_list = list(data[column].loc[:window - 1])
     sma = [statistics.mean(window_list)]
     # Pandas excludes the spliced value whe tail splicing.
-    returns = data['Return'].loc[window:]
+    returns = data[column].loc[window:]
     for value in returns:
         window_list = window_list[1:] + window_list[:1]
         window_list[-1] = value
@@ -375,13 +378,15 @@ def make_return_df(stock, start, end=None, interval=30, dirpath='./', ignore_mis
     return return_df
 
 
-def split_data(X, Y, percentage_to_evaluate):
+def split_data(X, Y, test_ratio, purge_ratio=0.0):
     # Slice out evaluation set.
-    evaluation_set_count = int(len(X) * percentage_to_evaluate)
+    assert purge_ratio + test_ratio < 1
+    evaluation_set_count = int(len(X) * test_ratio)
+    purge_set_count = int(len(X) * purge_ratio)
     evaluation_set_x = X[len(X) - evaluation_set_count:]
-    x = X[:len(X) - evaluation_set_count]
+    x = X[:len(X) - evaluation_set_count - purge_set_count]
     evaluation_set_y = Y[len(X) - evaluation_set_count:]
-    y = Y[:len(X) - evaluation_set_count]
+    y = Y[:len(X) - evaluation_set_count - purge_set_count]
     return np.array(x), np.array(evaluation_set_x), np.array(y), np.array(evaluation_set_y)
 
 
