@@ -202,9 +202,7 @@ def make_ema_df(data, window, alpha, column='Return'):
     ema_df['EMA'] = ema
     return ema_df
 
-
 def make_market_df(start='2019-01-01', end=None, interval=30, ignore_missing_data=False):
-    global stock, market_index
     mnemonics = dax.keys()
     securities = []
     for stock in mnemonics:
@@ -213,6 +211,13 @@ def make_market_df(start='2019-01-01', end=None, interval=30, ignore_missing_dat
     market_index = make_index_price_df(*securities)
     return market_index
 
+def make_market_return_df(market_index):
+    stocks = seperate_index(market_index)
+    return_df = []
+    for stock in stocks:
+        return_df.append(price_to_return_df(stock))
+    market_index_return = combine_stock_dfs(return_df, 'Return')
+    return market_index_return
 
 def make_price_df(stock, start, end=None, interval=30, ignore_missing_data=False, dirpath='./'):
     """Given a stock, a start date, end date optional, we return a prices dataframe with column headings
