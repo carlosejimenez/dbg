@@ -67,18 +67,21 @@ def build_x_y(df, window, alpha, column='Return'):
     return X, Y
 
 
-def build_ar_x_y(array, p, lag=1, column=None):
+def build_ar_x_y(array, p, lag=1, column=None, rest=0):
     """
-    Makes an AR(p) process dataset, for a single array, or dataframe column if it is specified.
+    Makes an AR(p) process dataset, for a single array, dataframe, or dataframe column if it is specified.
     Essentially, this produces a shifted lag dataset.
     :param array: Array, or dataframe on which to construct the dataset.
     :param p: AR(p), the number of values contained in the dependent vars vector.
     :param column: optional, use for dataset parameter; which column should we construct X, Y for?
+    :param rest: For use with dataframes. used to cut first few values from dataframe. (ie date/time for market_df)
     :return: two lists, x and y, where x is a list of vectors, and y is the associated labels.
     """
     lag -= 1  # The list splicing offsets us by one already.
     if column:
         array = array[column].tolist()
+    elif type(array) is pandas.DataFrame:
+        array = [row[rest:] for row in list(array.itertuples(index=False, name=None))[0:]]
     else:
         array = array.tolist()
     assert p < len(array)
@@ -203,6 +206,7 @@ def make_ema_df(data, window, alpha, column='Return'):
     return ema_df
 
 def make_market_df(start='2019-01-01', end=None, interval=30, ignore_missing_data=False):
+    global stock, market_index
     mnemonics = dax.keys()
     securities = []
     for stock in mnemonics:
