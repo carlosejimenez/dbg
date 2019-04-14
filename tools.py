@@ -202,6 +202,15 @@ def make_ema_df(data, window, alpha, column='Return'):
     ema_df['EMA'] = ema
     return ema_df
 
+def make_market_df(start='2019-01-01', end=None, interval=30, ignore_missing_data=False):
+    global stock, market_index
+    mnemonics = dax.keys()
+    securities = []
+    for stock in mnemonics:
+        sec = make_price_df(stock, start, end, interval, ignore_missing_data)
+        securities.append(sec)
+    market_index = make_index_price_df(*securities)
+    return market_index
 
 def make_price_df(stock, start, end=None, interval=30, ignore_missing_data=False, dirpath='./'):
     """Given a stock, a start date, end date optional, we return a prices dataframe with column headings
@@ -560,8 +569,19 @@ class StatisticalArbitrage:
             sigma_eq = np.sqrt(np.var(zeta)/(1-b**2))
             self.hyper_parameters.loc['Sigma_eq', stock] = sigma_eq
 
+    def predict(self, return_vector):
+        self.data = self.data.append(return_vector)
+        self._update_hyper_parameters()
+        signal_vector = -self.hyper_parameters.loc['Mean']/self.hyper_parameters.loc['Sigma_eq']
+        signal_vector = signal_vector.rename(lambda old_column_name: old_column_name.replace('Return', 'Signal'))
+        return signal_vector
 
-        print('thing')
+
+
+
+
+
+
 
 
 
