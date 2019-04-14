@@ -67,7 +67,7 @@ def build_x_y(df, window, alpha, column='Return'):
     return X, Y
 
 
-def build_ar_x_y(array, p, column=None):
+def build_ar_x_y(array, p, lag=1, column=None):
     """
     Makes an AR(p) process dataset, for a single array, or dataframe column if it is specified.
     Essentially, this produces a shifted lag dataset.
@@ -76,6 +76,7 @@ def build_ar_x_y(array, p, column=None):
     :param column: optional, use for dataset parameter; which column should we construct X, Y for?
     :return: two lists, x and y, where x is a list of vectors, and y is the associated labels.
     """
+    lag -= 1  # The list splicing offsets us by one already.
     if column:
         array = array[column].tolist()
     else:
@@ -83,9 +84,9 @@ def build_ar_x_y(array, p, column=None):
     assert p < len(array)
     x = []
     y = []
-    for i in range(p, len(array)):
+    for i in range(p+lag, len(array)):
         y.append(array[i])
-        x.append(array[i-p:i])
+        x.append(array[i-p-lag:i])
     return x, y
 
 
@@ -439,7 +440,6 @@ def seperate_index(index_df):
         dfs.append(df)
 
     return dfs
-
 
 
 def make_index_price_df(*dfs):
