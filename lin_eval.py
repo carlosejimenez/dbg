@@ -39,8 +39,8 @@ if __name__ == '__main__':
         return new_array
     first_day = '2019-01-01'
     end_date = '2019-02-01'
-    p = 4
-    interval = 60
+    p = 5
+    interval = 15
 
     P = {'Index': 1}
     cash = 0

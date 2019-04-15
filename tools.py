@@ -318,6 +318,25 @@ def make_sma_df(data, window, column="Return"):
     return sma_df
 
 
+def price_to_return(prices, difference=False):
+    """
+    Converts a price array to a corresponding return array. Useful for analysis that uses both values.
+    :param prices: prices from prediction or y
+    :param difference: Can calculate price difference instead of return if set True.
+    :return: return nparray..
+    """
+    return_list = []
+    for index in range(1, len(prices)):
+        old_price = prices[index-1]
+        price = prices[index]
+        if difference:
+            ret = price - float(old_price)
+        else:
+            ret = (price - float(old_price)) / float(old_price)
+        return_list.append(ret)
+    return np.array(return_list)
+
+
 def price_to_return_df(price_df, difference=False):
     """
     Converts a price dataframe to a corresponding return dataframe. Useful for analysis that uses both values.
