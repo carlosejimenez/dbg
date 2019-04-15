@@ -117,6 +117,8 @@ data/
 failed_to_write.txt
 xetra
 
+*.png
+
 # .DS_Store
 .DS_Store
 
