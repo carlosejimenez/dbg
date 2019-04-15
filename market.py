@@ -36,10 +36,10 @@ class Market:
         assert 0 < index < len(self.ticks), f'{index} out of reasonable bounds. Only {len(self.ticks)} stocks on market.'
         return self.ticks[index]
 
-    def iterate(self, index=True):
+    def iterate(self, tick_names=True):
         last_prices = [row[2:] for row in list(self.market.itertuples(index=False, name=None))[:self.p]]
         self.date, self.time = self.market.iloc[self.p][:2]
-        if index:
+        if tick_names:
             yield list(map(lambda x: [(s, t) for s, t in zip(self.ticks, x)], last_prices))
         else:
             yield last_prices
@@ -48,7 +48,7 @@ class Market:
             self.update_alloc(list(return_array))
             last_prices = last_prices[1:] + [row[2:]]
             self.date, self.time = row[0:2]
-            if index:
+            if tick_names:
                 yield list(map(lambda x: [(s, t) for s, t in zip(self.ticks, x)], last_prices))
             else:
                 yield last_prices
@@ -60,6 +60,7 @@ class Market:
                 self.alloc[stock] -= val
             else:
                 self.alloc[self.ticks.index(stock)] -= val
+        return sum([v for s, v in stock_val_tups])
 
     def liquidate_stocks(self, stocks, with_index=False):
         stocks = list(stocks)

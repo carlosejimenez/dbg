@@ -65,7 +65,7 @@ if __name__ == '__main__':
 
     market.buy(P.items())
     trades = []
-    for prices in market.iterate(index=False):
+    for prices in market.iterate(tick_names=False):
         pass
         # y_pred = [m.predict(get_ith_col_x(np.array(prices).reshape((-1, p, 30)), i)) for i, m in enumerate(models)]
         # y_pred = np.array(y_pred).flatten()
