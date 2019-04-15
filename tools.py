@@ -422,8 +422,13 @@ def split_dataframe(df, test_ratio, purge_ratio=0.0):
     evaluation_set_count = int(len(df) * test_ratio)
     purge_set_count = int(len(df) * purge_ratio)
     evaluation_set = df[len(df) - evaluation_set_count:]
+    df_purge = df[len(df) - evaluation_set_count - purge_set_count:len(df) - evaluation_set_count]
     df = df[:len(df) - evaluation_set_count - purge_set_count]
-    return pandas.DataFrame(df, columns=df_cols), pandas.DataFrame(evaluation_set, columns=df_cols)
+    if purge_ratio > 0:
+        return pandas.DataFrame(df, columns=df_cols), pandas.DataFrame(evaluation_set, columns=df_cols), \
+               pandas.DataFrame(df_purge, columns=df_cols)
+    else:
+        return pandas.DataFrame(df, columns=df_cols), pandas.DataFrame(evaluation_set, columns=df_cols)
 
 
 def trading_daterange(start, end):
