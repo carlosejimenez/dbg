@@ -32,8 +32,11 @@ class Market:
                 stocks.append(stock)
         return stocks
 
+    def get_alloc_value(self):
+        return sum(self.alloc)
+
     def get_tick_from_index(self, index):
-        assert 0 < index < len(self.ticks), f'{index} out of reasonable bounds. Only {len(self.ticks)} stocks on market.'
+        assert 0 <= index < len(self.ticks), f'{index} out of reasonable bounds. Only {len(self.ticks)} stocks on market.'
         return self.ticks[index]
 
     def iterate(self, tick_names=True):
