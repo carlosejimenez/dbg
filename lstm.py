@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pylab as plt
+from matplotlib.dates import MonthLocator, DateFormatter
+from datetime import datetime
 import tensorflow.python.keras.backend as K
 from math import log
 from tensorflow.python.keras.models import Sequential
@@ -48,9 +50,10 @@ class Lstm:
         self.model.add(Dropout(0.2))
         self.model.add(Dense(units=self.output_size))
         self.model.compile(optimizer='adam', loss='mean_squared_error')
-        self.model.fit(self.x_train, self.y_train, epochs=epochs, batch_size=batch_size)
+        hist = self.model.fit(self.x_train, self.y_train, epochs=epochs, batch_size=batch_size)
 
         return x_test, y_test
+
 
     def load_data(self, x, y, units, epochs, batch_size):
         self.x_train = np.array(x)
@@ -71,7 +74,7 @@ class Lstm:
         self.model.compile(optimizer='adam', loss='mean_squared_error')
         self.model.fit(self.x_train, self.y_train, epochs=epochs, batch_size=batch_size)
 
-    def predict(self, x_test, y_test=None, graph=False, title=None):
+    def predict(self, x_test, y_test=None, graph=False, title=None, dates=None):
         x_test = np.array(x_test).reshape((-1, self.time_steps, self.input_size))
         y_pred = self.model.predict(x_test)
         y_pred = self.scale_y.inverse_transform(y_pred)
@@ -81,24 +84,28 @@ class Lstm:
         #     y_pred.append(val_pred[0][0])
         assert len(y_pred) == len(x_test), f'Prediction malformed. x_test dim {x_test.shape[0]} != ({len(y_pred)},)'
         if graph:
+
             assert y_test is not None, f'y_test parameter must be initialized to graph.'
             assert title is not None, f'title parameter must be initialized to graph.'
             # y = y_train + y_purge + y_test (clearly this is the case)
             # self.scaler must use inverse_transform to convert the training set back to its real values.
-            y = list(self.scaler.inverse_transform(self.y_train)) + list(self.y_purge) + list(y_test)
+            y = list(self.scale_y.inverse_transform(self.y_train)) + list(self.y_purge) + list(y_test)
             y_p = [None]*len(list(self.y_train.flatten()) + list(self.y_purge))  # y_p to graph y_prediction
             y_p.extend(y_pred)
             self.y_purge = [None] * len(self.y_train) + self.y_purge + [None]*len(y_test)  # y_purge to graph y_purge
+            fig, ax = plt.subplots()
+            ax.plot_date(dates[:len(y)], y[:len(dates)], fmt="r-", label=f'True y')
+            ax.plot_date(dates[:len(y_p)], y_p[:len(dates)], fmt='b-', label=f'Predicted y')
+            ax.plot_date(dates[:len(self.y_purge)], self.y_purge[:len(dates)], fmt='g-', label=f'Purged values')
+            ax.set_title(f'{title}')
+            ax.xaxis.set_major_locator(MonthLocator())
+            ax.xaxis.set_major_formatter(DateFormatter('%Y-%m'))
+            # ax.xlabel('Time')
+            # ax.ylabel(f'y')
+            ax.legend()
+            plt.savefig(title)
             plt.clf()
-            plt.plot(y, color='navy', label=f'True y')
-            plt.plot(y_p, color='red', label=f'Predicted y')
-            plt.plot(self.y_purge, color='green', label=f'Purged values')
-            plt.title(f'{title}')
-            plt.xlabel('Time')
-            plt.ylabel(f'y')
-            plt.legend()
-            plt.show()
-            plt.clf()
+
             return np.array(y_pred)
         else:
             return np.array(y_pred)

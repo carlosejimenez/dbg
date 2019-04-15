@@ -6,6 +6,9 @@ from datetime import datetime
 import tools
 import operator
 
+from matplotlib.dates import MonthLocator, DateFormatter
+
+
 from market import Market
 from lstm import Lstm
 
@@ -37,17 +40,15 @@ if __name__ == '__main__':
         for row in array:
             new_array.append(row[i])
         return new_array
-    first_day = '2019-01-01'
-    end_date = '2019-02-01'
-    p = 5
-    interval = 15
+    first_day = '2017-07-01'
+    end_date = '2019-04-01'
+    p = 30
+    interval = 60
 
     P = {'Index': 1}
     cash = 0
     my_df = tools.make_market_df(first_day, end_date, interval=interval, ignore_missing_data=True)
-    dates = list(map(datetime.fromisoformat,
-                     [str(x) + ' ' + str(y) for x, y in
-                      list(my_df.get(['Date', 'Time']).itertuples(index=False, name=None))]))
+    dates = list(' ' for x, y in list(my_df.get(['Date', 'Time']).itertuples(index=False, name=None)))
 
     x_train, x_test, x_purge = tools.split_dataframe(my_df, test_ratio=0.2, purge_ratio=0.1)
     market = Market(x_test, p=p)
@@ -85,33 +86,39 @@ if __name__ == '__main__':
 
     x_test, y_test = tools.build_ar_x_y(x_test, p=p, rest=2)
     x_purge, y_purge = tools.build_ar_x_y(x_purge, p=p, rest=2)
-    for i in range(0, 30):
-        yt = np.array(get_ith_col_y(np.array(y).reshape(-1, 30), i))
-        ypurge = [None]*len(yt) + list(np.array(get_ith_col_y(np.array(y_purge).reshape((-1, 30)), i))) + [None]*len(y_preds)
-        yy = np.array(get_ith_col_y(np.array(y_test).reshape((-1, 30)), i))
-        yt = list(yt) + [None]*len(y_purge)
-        yp = [None]*len(yt)
-        yt.extend(list(yy))
-        yp = yp + list(np.array(get_ith_col_y(np.array(y_preds).reshape((-1, 30)), i)))
-        plt.plot_date(x=dates[:len(yt)], y=yt, fmt="r-", label=f'True y')
-        plt.plot_date(x=dates[:len(yp)], y=yp, fmt="b-", label=f'Predicted y')
-        plt.plot_date(x=dates[:len(ypurge)], y=ypurge[:len(dates)], fmt='g-', label=f'Purged data')
-        # plt.plot(x=dates, y=yt, color='navy', label=f'True y')
-        # plt.plot(x=dates, y=yp[:-1], color='red', label=f'Predicted y')
-        plt.title(f'Ridge: {market.get_tick_from_index(i)} - ({first_day} - {end_date}), p = {p}, interval = {interval}')
-        plt.xlabel('Time')
-        plt.ylabel(f'y')
-        plt.legend()
-        plt.show()
-        plt.clf()
+    # for i in range(0, 30):
+    #     yt = np.array(get_ith_col_y(np.array(y).reshape(-1, 30), i))
+    #     ypurge = [None]*len(yt) + list(np.array(get_ith_col_y(np.array(y_purge).reshape((-1, 30)), i))) + [None]*len(y_preds)
+    #     yy = np.array(get_ith_col_y(np.array(y_test).reshape((-1, 30)), i))
+    #     yt = list(yt) + [None]*len(y_purge)
+    #     yp = [None]*len(yt)
+    #     yt.extend(list(yy))
+    #     yp = yp + list(np.array(get_ith_col_y(np.array(y_preds).reshape((-1, 30)), i)))
+    #     plt.plot_date(x=dates[:len(yt)], y=yt, fmt="r-", label=f'True y')
+    #     plt.plot_date(x=dates[:len(yp)], y=yp, fmt="b-", label=f'Predicted y')
+    #     plt.plot_date(x=dates[:len(ypurge)], y=ypurge[:len(dates)], fmt='g-', label=f'Purged data')
+    #     # plt.plot(x=dates, y=yt, color='navy', label=f'True y')
+    #     # plt.plot(x=dates, y=yp[:-1], color='red', label=f'Predicted y')
+    #     plt.title(f'Ridge: {market.get_tick_from_index(i)} - ({first_day} - {end_date}), p = {p}, interval = {interval}')
+    #     plt.xlabel('Time')
+    #     plt.ylabel(f'y')
+    #     plt.legend()
+    #     plt.show()
+    #     plt.clf()
+
+
+    months = MonthLocator()
+    formatter = DateFormatter('%Y-%m')
 
     plt.clf()
-    plt.plot_date(x=cash_x, y=cash_y, fmt="y-", label=f'Monetary value')
-    plt.title(f'Portfolio value - ({first_day} - {end_date}), p = {p}, interval = {interval}')
-    plt.xlabel('Time')
-    plt.ylabel(f'value')
-    plt.legend()
-    plt.show()
+    fig, ax = plt.subplots()
+    ax.plot_date(x=cash_x, y=cash_y, fmt="y-", label=f'Monetary value')
+    title = f'Portfolio value AR(5) - ({first_day} - {end_date}), p = 5, interval = 15'
+    ax.set_title(title)
+    ax.xaxis.set_major_locator(months)
+    ax.xaxis.set_major_formatter(formatter)
+    ax.legend()
+    plt.savefig(title)
     plt.clf()
 
     # lstms = {tick: Lstm() for tick in market.ticks}

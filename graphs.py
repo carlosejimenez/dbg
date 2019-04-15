@@ -11,17 +11,21 @@ def graph_prices(y_pred, y_test, title, dates, ticks='Year'):
     yt = list(y_test)
     yp = [None]*(len(y_test) - len(y_pred)) + list(y_pred)
     fig, ax = plt.subplots()
-    ax.plot_date(x=dates[:len(yt)], y=yt, fmt="r-", label=f'True y')
-    ax.plot_date(x=dates[:len(yp)], y=yp, fmt="b-", label=f'Predicted y')
-    if ticks=='Year':
-        ax.xaxis.set_major_locator(years)
+    if dates is None:
+        ax.plot(yt, color="red", label=f'True y')
+        ax.plot(yp, color="blue", label=f'Predicted y')
     else:
-        ax.xaxis.set_major_locator(months)
-    if ticks=='Year':
-        formatter = mdates.DateFormatter('%Y')
-    else:
-        formatter = mdates.DateFormatter('%Y-%m')
-    ax.xaxis.set_major_formatter(formatter)
+        ax.plot_date(x=dates[:len(yt)], y=yt, fmt="r-", label=f'True y')
+        ax.plot_date(x=dates[:len(yp)], y=yp, fmt="b-", label=f'Predicted y')
+        if ticks=='Year':
+            ax.xaxis.set_major_locator(years)
+        else:
+            ax.xaxis.set_major_locator(months)
+        if ticks=='Year':
+            formatter = mdates.DateFormatter('%Y')
+        else:
+            formatter = mdates.DateFormatter('%Y-%m')
+        ax.xaxis.set_major_formatter(formatter)
     # plt.plot(x=dates, y=yt, color='navy', label=f'True y')
     # plt.plot(x=dates, y=yp[:-1], color='red', label=f'Predicted y')
     ax.set_title(title)
@@ -30,6 +34,7 @@ def graph_prices(y_pred, y_test, title, dates, ticks='Year'):
     ax.legend()
     # plt.show()
     plt.savefig(title)
+    plt.close()
     plt.clf()
 
 
