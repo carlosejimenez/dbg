@@ -6,6 +6,7 @@ import requests
 import statistics
 from collections import namedtuple
 from threading import Lock
+from itertools import chain
 
 from collections import OrderedDict
 from datetime import datetime, timedelta
@@ -89,7 +90,7 @@ def build_ar_x_y(array, p, lag=1, column=None, rest=0):
     y = []
     for i in range(p+lag, len(array)):
         y.append(array[i])
-        x.append(array[i-p-lag:i])
+        x.append(np.array(array[i-p-lag:i]).flatten())
     return x, y
 
 

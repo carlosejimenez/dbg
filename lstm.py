@@ -10,25 +10,29 @@ import tools
 
 
 class Lstm:
-    def __init__(self):
+    def __init__(self, time_steps, input_size, output_size):
+        self.time_steps = time_steps
+        self.input_size = input_size
+        self.output_size = output_size
         self.x_train = None
         self.y_train = None
         self.y_purge = None
 
-        self.scaler = MinMaxScaler(feature_range=(-1, 1))
+        self.scale_y = MinMaxScaler(feature_range=(-1, 1))
+        self.scale_x = MinMaxScaler(feature_range=(-1, 1))
         self.model = Sequential()
 
     def load_and_split_data(self, x, y, test_ratio, purge_ratio, units, epochs, batch_size):
         self.x_train, x_test, self.y_train, y_test = tools.split_data(x, y, test_ratio=test_ratio,
                                                                       purge_ratio=purge_ratio)
         self.y_purge = y[len(self.y_train):len(y) - len(y_test)]
-        self.y_train = self.scaler.fit_transform(np.array(self.y_train).reshape(-1, 1))
-        self.x_train = self.scaler.transform(self.x_train)
-        x_test = self.scaler.transform(x_test)
-        self.x_train = np.reshape(self.x_train, (self.x_train.shape[0], self.x_train.shape[1], 1))
-        x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[1], 1))
+        self.y_train = self.scale_y.fit_transform(np.array(self.y_train).reshape(-1, self.output_size))
+        self.x_train = self.scale_x.fit_transform(self.x_train)
+        x_test = self.scale_x.transform(x_test)
+        self.x_train = np.reshape(self.x_train, (-1, self.time_steps, self.input_size))
+        x_test = np.reshape(x_test, (-1, self.time_steps, self.input_size))
 
-        self.model.add(LSTM(units=units, return_sequences=True, input_shape=(self.x_train.shape[1], 1)))
+        self.model.add(LSTM(units=units, return_sequences=True, input_shape=(self.time_steps, self.input_size)))
         self.model.add(Dropout(0.2))
         self.model.add(LSTM(units=units, return_sequences=True))
         self.model.add(Dropout(0.2))
@@ -36,18 +40,39 @@ class Lstm:
         self.model.add(Dropout(0.2))
         self.model.add(LSTM(units=units))
         self.model.add(Dropout(0.2))
-        self.model.add(Dense(units=1))
+        self.model.add(Dense(units=self.output_size))
         self.model.compile(optimizer='adam', loss='mean_squared_error')
         self.model.fit(self.x_train, self.y_train, epochs=epochs, batch_size=batch_size)
 
         return x_test, y_test
 
+    def load_data(self, x, y, units, epochs, batch_size):
+        self.x_train = np.array(x)
+        self.y_train = np.array(y)
+        self.y_train = self.scale_y.fit_transform(np.array(y).reshape(-1, self.output_size))
+        self.x_train = self.scale_x.fit_transform(self.x_train)
+        self.x_train = np.reshape(self.x_train, (-1, self.time_steps, self.input_size))
+
+        self.model.add(LSTM(units=units, return_sequences=True, input_shape=(self.time_steps, self.input_size)))
+        self.model.add(Dropout(0.2))
+        self.model.add(LSTM(units=units, return_sequences=True))
+        self.model.add(Dropout(0.2))
+        self.model.add(LSTM(units=units, return_sequences=True))
+        self.model.add(Dropout(0.2))
+        self.model.add(LSTM(units=units))
+        self.model.add(Dropout(0.2))
+        self.model.add(Dense(units=self.output_size))
+        self.model.compile(optimizer='adam', loss='mean_squared_error')
+        self.model.fit(self.x_train, self.y_train, epochs=epochs, batch_size=batch_size)
+
     def predict(self, x_test, y_test=None, graph=False, title=None):
-        y_pred = []
-        for val in x_test:
-            val_pred = self.model.predict(val.reshape((1, val.shape[0], val.shape[1])))
-            val_pred = self.scaler.inverse_transform(val_pred)
-            y_pred.append(val_pred[0][0])
+        x_test = np.array(x_test).reshape((-1, self.time_steps, self.input_size))
+        y_pred = self.model.predict(x_test)
+        y_pred = self.scale_y.inverse_transform(y_pred)
+        # for val in x_test:
+        #     val_pred = self.model.predict(val.reshape((1, val.shape[0], val.shape[1])))
+        #     val_pred = self.scaler.inverse_transform(val_pred)
+        #     y_pred.append(val_pred[0][0])
         assert len(y_pred) == len(x_test), f'Prediction malformed. x_test dim {x_test.shape[0]} != ({len(y_pred)},)'
         if graph:
             assert y_test is not None, f'y_test parameter must be initialized to graph.'
@@ -68,6 +93,6 @@ class Lstm:
             plt.legend()
             plt.show()
             plt.clf()
-            return y_pred
+            return np.array(y_pred)
         else:
-            return y_pred
+            return np.array(y_pred)
