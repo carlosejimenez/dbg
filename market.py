@@ -5,7 +5,8 @@ from tools import dax
 
 
 class Market:
-    def __init__(self, market_df):
+    def __init__(self, market_df, p=1):
+        self.p = p
         self.market = market_df
         self.alloc = [0 for x in range(30)]
         self.ticks = list(dax.keys()) + ['Index']
@@ -29,19 +30,19 @@ class Market:
         return stocks
 
     def iterate(self, index=True):
-        last_prices = list(self.market.iloc[0][2:])
-        self.date, self.time = self.market.iloc[0][:2]
+        last_prices = [row[2:] for row in list(self.market.itertuples(index=False, name=None))[:self.p]]
+        self.date, self.time = self.market.iloc[self.p][:2]
         if index:
-            yield zip(self.ticks, last_prices)
+            yield list(map(lambda x: [(s, t) for s, t in zip(self.ticks, x)], last_prices))
         else:
             yield last_prices
-        for row in list(self.market.itertuples(index=False, name=None))[1:]:
-            return_array = np.divide(np.subtract(list(row[2:]), last_prices), list(last_prices))
-            last_prices = list(row[2:])
-            self.date, self.time = row[0:2]
+        for row in list(self.market.itertuples(index=False, name=None))[self.p:]:
+            return_array = np.divide(np.subtract(list(row[2:]), last_prices[-1]), list(last_prices[-1]))
             self.update_alloc(list(return_array))
+            last_prices = last_prices[1:] + [row[2:]]
+            self.date, self.time = row[0:2]
             if index:
-                yield zip(self.ticks, last_prices)
+                yield list(map(lambda x: [(s, t) for s, t in zip(self.ticks, x)], last_prices))
             else:
                 yield last_prices
 
