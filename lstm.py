@@ -11,6 +11,12 @@ import tools
 
 class Lstm:
     def __init__(self, time_steps, input_size, output_size):
+        """
+        sets up local fields and objects.
+        :param time_steps: time step p for AR process p
+        :param input_size: number of stocks we are trying to predict. Ignore p. just stocks number
+        :param output_size: same as input_size??. Potentially redundant field.
+        """
         self.time_steps = time_steps
         self.input_size = input_size
         self.output_size = output_size
