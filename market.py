@@ -14,10 +14,13 @@ class Market:
         self.date = None
         self.time = None
 
-    def buy(self, stock_val_tups):
+    def buy(self, stock_val_tups, with_index=False):
         stock_val_tups = list(stock_val_tups)
         for stock, val in stock_val_tups:
-            self.alloc[self.alloc.index(stock)] += val
+            if with_index:
+                self.alloc[stock] += val
+            else:
+                self.alloc[self.ticks.index(stock)] += val
 
     def get_alloc(self):
         return list(zip(self.ticks, self.alloc))
@@ -28,6 +31,10 @@ class Market:
             if val > 0:
                 stocks.append(stock)
         return stocks
+
+    def get_tick_from_index(self, index):
+        assert 0 < index < len(self.ticks), f'{index} out of reasonable bounds. Only {len(self.ticks)} stocks on market.'
+        return self.ticks[index]
 
     def iterate(self, index=True):
         last_prices = [row[2:] for row in list(self.market.itertuples(index=False, name=None))[:self.p]]
@@ -46,19 +53,25 @@ class Market:
             else:
                 yield last_prices
 
-    def sell(self, stock_val_tups):
-        sell_value = 0
+    def sell(self, stock_val_tups, with_index=False):
         stock_val_tups = list(stock_val_tups)
         for stock, val in stock_val_tups:
-            sell_value += sell_value
-            self.alloc[self.alloc.index(stock)] -= val
-        return sell_value
+            if with_index:
+                self.alloc[stock] -= val
+            else:
+                self.alloc[self.ticks.index(stock)] -= val
 
-    def liquidate_stocks(self, stocks):
+    def liquidate_stocks(self, stocks, with_index=False):
         stocks = list(stocks)
-        sell_value = sum([self.alloc[self.alloc.index(stock)] for stock in stocks])
+        if with_index:
+            sell_value = sum([self.alloc[stock] for stock in stocks])
+        else:
+            sell_value = sum([self.alloc[self.ticks.index(stock)] for stock in stocks])
         for stock in stocks:
-            self.alloc[self.alloc.index(stock)] = 0
+            if with_index:
+                self.alloc[stock] = 0
+            else:
+                self.alloc[self.ticks.index(stock)] = 0
         return sell_value
             
     def update_alloc(self, return_array):
