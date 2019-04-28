@@ -77,6 +77,7 @@ if __name__ == '__main__':
         max_index = list(returns).index(max_return)
         cash = market.liquidate_stocks(market.ticks)
         cash_y.append(cash)
+        # print(f'cash: {cash}, sec: {market.get_tick_from_index(max_index)}')
         cash_x.append(datetime.fromisoformat(str(market.date) + ' ' + str(market.time)))
         market.buy([(max_index, cash)], with_index=True)
         trades.append(max_index)

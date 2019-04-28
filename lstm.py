@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pylab as plt
-from matplotlib.dates import MonthLocator, DateFormatter
+from matplotlib.dates import YearLocator, DateFormatter
 from datetime import datetime
 import tensorflow.python.keras.backend as K
 from math import log
@@ -36,9 +36,9 @@ class Lstm:
         self.y_purge = y[len(self.y_train):len(y) - len(y_test)]
         self.y_train = self.scale_y.fit_transform(np.array(self.y_train).reshape(-1, self.output_size))
         self.x_train = self.scale_x.fit_transform(self.x_train)
-        x_test = self.scale_x.transform(x_test)
+        # x_test = self.scale_x.transform(x_test)
         self.x_train = np.reshape(self.x_train, (-1, self.time_steps, self.input_size))
-        x_test = np.reshape(x_test, (-1, self.time_steps, self.input_size))
+        # x_test = np.reshape(x_test, (-1, self.time_steps, self.input_size))
 
         self.model.add(LSTM(units=units, return_sequences=True, input_shape=(self.time_steps, self.input_size)))
         self.model.add(Dropout(0.2))
@@ -58,6 +58,7 @@ class Lstm:
     def load_data(self, x, y, units, epochs, batch_size):
         self.x_train = np.array(x)
         self.y_train = np.array(y)
+        # print(f'X_train.shape = {self.x_train.shape}')
         self.y_train = self.scale_y.fit_transform(np.array(y).reshape(-1, self.output_size))
         self.x_train = self.scale_x.fit_transform(self.x_train)
         self.x_train = np.reshape(self.x_train, (-1, self.time_steps, self.input_size))
@@ -75,6 +76,9 @@ class Lstm:
         self.model.fit(self.x_train, self.y_train, epochs=epochs, batch_size=batch_size)
 
     def predict(self, x_test, y_test=None, graph=False, title=None, dates=None):
+        x_test = np.array(x_test).reshape(-1, self.time_steps*self.output_size)
+        # print(f'x_test.shape = {x_test.shape}')
+        x_test = self.scale_x.transform(np.array(x_test))
         x_test = np.array(x_test).reshape((-1, self.time_steps, self.input_size))
         y_pred = self.model.predict(x_test)
         y_pred = self.scale_y.inverse_transform(y_pred)
@@ -98,8 +102,8 @@ class Lstm:
             ax.plot_date(dates[:len(y_p)], y_p[:len(dates)], fmt='b-', label=f'Predicted y')
             ax.plot_date(dates[:len(self.y_purge)], self.y_purge[:len(dates)], fmt='g-', label=f'Purged values')
             ax.set_title(f'{title}')
-            ax.xaxis.set_major_locator(MonthLocator())
-            ax.xaxis.set_major_formatter(DateFormatter('%Y-%m'))
+            ax.xaxis.set_major_locator(YearLocator())
+            ax.xaxis.set_major_formatter(DateFormatter('%Y'))
             # ax.xlabel('Time')
             # ax.ylabel(f'y')
             ax.legend()
